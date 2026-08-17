@@ -1,0 +1,6 @@
+{
+  "name": "EduPlanner AI",
+  "description": "EduPlanner AI – Academic Research & Education Platform. Plan Smarter. Research Faster. Learn Better.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

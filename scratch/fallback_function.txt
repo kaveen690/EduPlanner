@@ -1,0 +1,200 @@
+1351: - Citation Standard: ${citationStyle || 'APA 7th Edition'}
+1352: - Selected Output Language: ${language || 'en'}
+1353: - Custom User Instructions: ${customInstructions || 'Ensure deep academic rigor, continuous topic focus, and complete single-language consistency.'}
+1354: 
+1355: Return a strict JSON object with this exact structure:
+1356: {
+1357:   "title": "Precise, doctoral-level title strictly in the target language",
+1358:   "topic": "${topic}",
+1359:   "field": "${field || 'General'}",
+1360:   "paperType": "${paperType || 'empirical'}",
+1361:   "academicLevel": "${levelStr}",
+1362:   "language": "${language || 'en'}",
+1363:   "abstract": "Exhaustive academic abstract (200-300 words) written strictly in the target language...",
+1364:   "keywords": ["5 to 8 topic-specific keywords in target language"],
+1365:   "sections": [
+1366:     {
+1367:       "id": "intro",
+1368:       "title": "Section 1 Title in target language",
+1369:       "content": "Multi-paragraph introduction detailing background, problem statement, research objectives, and research questions strictly in target language...",
+1370:       "citations": []
+1371:     },
+1372:     {
+1373:       "id": "literature",
+1374:       "title": "Section 2 Title (Exhaustive Literature Review & Research Gap) in target language",
+1375:       "content": "Deep, multi-paragraph scholarly literature review generated strictly from topic: '${topic}'. MUST include: 1. Conceptual Review & Core Definitions specific to topic; 2. Population & Educational Context Integration (e.g. teachers/institutions); 3. Critical Synthesis of Previous Empirical Studies (International, Regional, & Local); 4. Methodological & Contextual Comparison (Agreements, Contradictions, Variations); 5. Explicit Topic-Specific Research Gap Statement explaining what is known vs. what remains unexamined in target context. Written 100% strictly in target language.",
+1376:       "citations": []
+1377:     },
+1378:     {
+1379:       "id": "methodology",
+1380:       "title": "Section 3 Title in target language",
+1381:       "content": "Multi-paragraph methodology, research design, population, sample, and measurement instruments strictly in target language...",
+1382:       "citations": []
+1383:     },
+1384:     {
+1385:       "id": "results",
+1386:       "title": "Section 4 Title in target language",
+1387:       "content": "Multi-paragraph data analysis plan and empirical framework strictly in target language (without fake stats if no real data is provided)...",
+1388:       "citations": []
+1389:     },
+1390:     {
+1391:       "id": "discussion",
+1392:       "title": "Section 5 Title in target language",
+1393:       "content": "Multi-paragraph scholarly discussion connecting insights back to literature strictly in target language...",
+1394:       "citations": []
+1395:     },
+1396:     {
+1397:       "id": "conclusion",
+1398:       "title": "Section 6 Title in target language",
+1399:       "content": "Multi-paragraph conclusion, practical recommendations, and research limitations strictly in target language...",
+1400:       "citations": []
+1401:     }
+1402:   ],
+1403:   "references": [
+1404:     "Topic-specific academic references in target format"
+1405:   ]
+1406: }
+1407: `;
+1408: 
+1409:   try {
+1410:     const response = await callGemini(prompt, {
+1411:       responseMimeType: 'application/json',
+1412:       temperature: 0.7
+1413:     });
+1414: 
+1415:     const jsonText = response.text ? response.text.trim() : '{}';
+1416:     const parsedData = JSON.parse(jsonText);
+1417:     if (!parsedData.title || !parsedData.abstract || !parsedData.sections) {
+1418:       throw new Error('Incomplete structure from Gemini API');
+1419:     }
+1420:     return res.json(parsedData);
+1421:   } catch (err: any) {
+1422:     console.warn('[ResearchAI Engine Warning]: Gemini API call encountered an error or permission restriction. Utilizing academic fallback generator.', err?.message || err);
+1423:     const fallbackPaper = generateFallbackResearchPaper(
+1424:       topic,
+1425:       field,
+1426:       paperType,
+1427:       wordCount,
+1428:       citationStyle,
+1429:       language,
+1430:       keywords,
+1431:       customInstructions,
+1432:       academicLevel,
+1433:       regionalContext,
+1434:       theoreticalFramework,
+1435:       variables,
+1436:       customSubsections
+1437:     );
+1438:     return res.json(fallbackPaper);
+1439:   }
+1440: });
+1441: 
+1442: // 1.5. Academic Search Engine Route (CrossRef API + Gemini Fallback)
+1443: app.post('/api/academic-search', async (req, res) => {
+1444:   const { query, year, language } = req.body;
+1445:   if (!query || !query.trim()) {
+1446:     return res.status(400).json({ error: 'Search query is required' });
+1447:   }
+1448: 
+1449:   try {
+1450:     const crossRefUrl = `https://api.crossref.org/works?query=${encodeURIComponent(query)}&rows=8`;
+1451:     const cfRes = await fetch(crossRefUrl, { headers: { 'User-Agent': 'EduPlannerResearch/2.0 (mailto:research@eduplanner.ai)' } });
+1452:     if (cfRes.ok) {
+1453:       const cfData = await cfRes.json();
+1454:       const items = cfData?.message?.items || [];
+1455:       if (items.length > 0) {
+1456:         const mapped = items.map((item: any, idx: number) => {
+1457:           const authorArr = item.author?.map((a: any) => `${a.given || ''} ${a.family || ''}`.trim()).filter(Boolean) || [];
+1458:           const authors = authorArr.length > 0 ? authorArr.join(', ') : 'Academic Research Group';
+1459:           const pubYear = item.published?.['date-parts']?.[0]?.[0] || item.created?.['date-parts']?.[0]?.[0] || 2023;
+1460:           const journal = item['container-title']?.[0] || item.publisher || 'Peer-Reviewed Journal';
+1461:           const title = item.title?.[0] || `Research Inquiry on ${query}`;
+1462:           const doi = item.DOI || '';
+1463:           const abstract = item.abstract// Single Proposal Section Regeneration Route
+1464: app.post('/api/regenerate-proposal-section', async (req, res) => {
+1465:   const { sectionCode, sectionTitle, proposalTitle, currentSectionContent, proposalContext, language, academicLevel } = req.body;
+1466: 
+1467:   if (!sectionTitle || !proposalTitle) {
+1468:     return res.status(400).json({ error: 'Section title and proposal title are required' });
+1469:   }
+1470: 
+1471:   const langInstruction = getLanguageInstructions(language || 'en');
+1472:   const cleanTopic = proposalTitle.trim();
+1473: 
+1474:   const prompt = `
+1475: You are a Senior Academic Research Advisor and Editor.
+1476: Generate ONLY the section "${sectionTitle}" (Code: ${sectionCode}) for the research proposal titled: "${cleanTopic}".
+1477: 
+1478: CRITICAL REGENERATION MANDATES:
+1479: 1. MASTER RESEARCH TOPIC & SINGLE SOURCE OF TRUTH:
+1480:    - Generate this section ONLY for the following research topic: "${cleanTopic}".
+1481:    - Do NOT introduce any other research topic, unrelated population, unrelated location, or unrelated variables.
+1482: 2. Focus ONLY on regenerating "${sectionTitle}". Do NOT generate other proposal sections.
+1483: 3. ${langInstruction}. Output ALL content 100% strictly in the target language (${language || 'en'}).
+1484: 4. Preserve academic depth appropriate for "${academicLevel || "Master's"}".
+1485: 5. Maintain strict logical consistency with the research topic "${cleanTopic}".
+1486: 
+1487: CONTEXT:
+1488: Proposal Title: "${cleanTopic}"
+1489: Current Content: "${currentSectionContent || 'N/A'}"
+1490: Overall Context: "${proposalContext || 'Academic Research Study'}"
+1491: 
+1492: Return JSON:
+1493: {
+1494:   "sectionCode": "${sectionCode}",
+1495:   "sectionTitle": "${sectionTitle}",
+1496:   "newContent": "Deeply developed academic text for this section strictly in target language..."
+1497: }
+1498: `;
+1499: 
+1500:   try {
+1501:     const response = await callGemini(prompt, { responseMimeType: 'application/json', temperature: 0.6 });
+1502:     const parsed = JSON.parse(response.text?.trim() || '{}');
+1503:     if (parsed && parsed.newContent) {
+1504:       return res.json(parsed);
+1505:     }
+1506:     throw new Error('Empty response from Gemini');
+1507:   } catch (err: any) {
+1508:     console.warn('[Section Regeneration Warning]: Utilizing fallback synthesis.', err?.message);
+1509:     const mode = req.body.mode || 'regenerate';
+1510:     
+1511:     let synthesizedText = '';
+1512:     const isEn = language === 'en';
+1513:     const isAr = language === 'ar';
+1514: 
+1515:     if (mode === 'continue') {
+1516:       if (isEn) {
+1517:         synthesizedText = (currentSectionContent || '') + `\n\nFurthermore, empirical investigations emphasize that key independent constructs significantly influence primary outcomes regarding "${cleanTopic}". The systematic integration of structured methodology and validated evaluation tools ensures enhanced academic depth and institutional decision-making.`;
+1518:       } else if (isAr) {
+1519:         synthesizedText = (currentSectionContent || '') + `\n\nعلاوة على ذلك، تؤكد الدراسات الميدانية أن المتغيرات المستقلة تؤثر بشكل مباشر ومباشر في المخرجات الرئيسية لموضوع "${cleanTopic}". يساهم المنهج العلمي المتبع في تعزيز الرؤية الأكاديمية وتوفير دلالات منهجية دقيقة.`;
+1520:       } else {
+1521:         synthesizedText = (currentSectionContent || '') + `\n\nژ لایەکێ دیترڤە، ئاماژە ب وێ یەکێ دهێتە کرن کو گۆڕاوێن سەربەخۆ کاریگەرییا راستەوخۆ دکەنە سەر دەرئەنجامێن ڕاستەقینە د بابەتێ "${cleanTopic}" دا. بکارئینانا ڕێکارێن ئەکادیمی یێن نوێ دێ بیە ئەگەرا گەشەسەندنی کوالێتیی توێژینەوەیێ.`;
+1522:       }
+1523:     } else {
+1524:       if (isEn) {
+1525:         synthesizedText = `Revised Academic Synthesis for "${sectionTitle}" on the topic "${cleanTopic}":\n\nThis section focuses on key theoretical and empirical parameters concerning "${cleanTopic}". Rigorous methodologies and systematic literature analysis provide strong foundational evidence for researchers and academic stakeholders.`;
+1526:       } else if (isAr) {
+1527:         synthesizedText = `مراجعة أكاديمية مطورة لبند "${sectionTitle}" حول موضوع "${cleanTopic}":\n\nيركز هذا القسم على التحليل العلمي المنهجي للمتغيرات والأبعاد الرئيسية المتعلقة بموضوع البحث "${cleanTopic}"، مما يوفر رؤى أكاديمية دقيقة تساهم في إثراء أدبيات الدراسة.`;
+1528:       } else {
+1529:         synthesizedText = `پێداچوونەڤەیا زانستییا نوێکراوە ژ بۆ بەشێ "${sectionTitle}" ل سەر بابەتێ "${cleanTopic}":\n\nئەڤ بەشە تیشکێ دکێشیتە سەر ئەگەرێن سەرەکی یێن پەیوەندیدار ب بابەتێ توێژینەوەیێ دا. د شەرجۆڤەیێ ئەکادیمی دا، جەخت ل سەر وێ یەکێ دهێتە کرن کو ڕاهێنانا بەردەوام و دابینکرنا ئامرازێن هەڤچەرخ بنەمایێن سەرەکی یێن گەشەپێدانی پڕ دکەن.`;
+1530:       }
+1531:     }
+1532: 
+1533:     return res.json({
+1534:       sectionCode,
+1535:       sectionTitle,
+1536:       newContent: synthesizedText
+1537:     });
+1538:   }
+1539: });�ر بکن د ${locName} دا.`,
+1540: 
+1541:     introductionText: `بەشێ ئێکێ: پێشەکییا توێژینەوەیێ (Introduction)\n\nبابەتێ "${cleanTopic}" ئێک ژ بابەتێن هەرە سەرەکی و ستراتیژی دهێتە ژمارتن د بوارێ ${field || 'پەروەردە و زانستێن جڤاکی'} دا. د جیهانا ئەمڕۆ دا کو بەرەو گۆڕانکاریێن خێرا یێن تەکنۆلۆجی و پەروەردەیی هەنگاو دەنێت، سەلمێندراوە کو گەشەپێدانی زانستی د ڤی بواریدا رۆڵەکێ کارا دەگێڕێت د بەرزکردنەوەی ئاستێ خزمەتگوزارییەکان دا.\n\nد شەرجۆڤەیی ${locName} دا، ${popName} وەک پایەیەکێ بنەڕەتی و بەشەکێ سەرەکی یێ پرۆسەیێ دهێنە دانان. تێگەهشتن لە گۆڕاوەکانی بابەتێ "${cleanTopic}" بیرۆکەی نوێ دافۆرْم دەکات و کارپێکرنێن نوێ گەشە پێددەت. لەوما، تێگەهشتنی زانستی ل سەر ڤی بابەتیدا پێویستی ب لێکۆڵینەوەیەکا مەیدانییا ئەکادیمییا تێروتەسەل هەیە.\n\nد شەرجۆڤەی ناوچەیی یێ ${locName} دا، سەڕەرای گەشەسەندنی دامەزراوەکان، تا نوکە کێمترین توێژینەوەی مەیدانیی تێروتەسەل ل سەر تێگەهشتن و ڕادەی بابەتێ "${cleanTopic}" لای ${popName} ئەنجامدراون. ل سەر ڤی بنەمایی، ئاریشەیەکا زانستی و بەڵگەداری هەیە پەیوەندیدار ب نەبوونا ئامارێن دروست و پێوەرە زانستییەکان.\n\nد پێناو بەدیهێنانی ڤان ئارمانجانەدا، توێژینەوەکە هەوڵ ددەت ب شێوەیەکێ سیستەماتیک تیشکێ بکێشیتە سەر ڤان ئەگەران، هۆکارە کاریگەرەکان دیار بکات، و وەڵاما پرسیارێن زانستی بدەتەڤە ژ بۆ دانانا چوارچێوەیەکێ ئەکادیمی یێ دروست.`,
+1542: 
+1543:     backgroundText: `پاشخانی زانستی یێ توێژینەوەیێ (Background of the Study)\n\nپاشخانی زانستی یێ بابەتێ "${cleanTopic}" بنەمایەکێ ئەکادیمی یێ دەولەمەند دابین دکەت. توێژینەوەیێن نێودەوڵەتی دیار دکەن کو تێگەهشتنی زانستی د ڤی بواریدا تەنها دروشمێک نییە، بەڵکو ئێک ژ پایەیێن سەرەکی یێن گەشەپێدانا مرۆڤییە. ${popName} پێویستی ب هۆشیاری، بەکارهێنانی ئامرازی نوێ، و راهێنانا بەردەوام هەیە.\n\nد چەندین توێژینەوەیێن پێشتردا، بەکارئینانا مۆدێلێن تیۆری یێن زانستی دیار کرییە کو فاکتەرێن ژینگەیی، دەروونی، و ڕەفتاری کاریگەرییا راستەوخۆ ل سەر ڤی بابەتە دروست دکەن. کاتێک ئاستی هۆشیاری بەرز دەبێتەوە، ئەنجامە کارپێکراوەکان زیاتر دەبن.\n\nد شەرجۆڤەیێ ئیداری و پەروەردەیی یێ ${locName} دا، دامەزراوەکان ڕوبەڕووی گۆڕانکاریێن نوی بوینەڤە. لەوما، شیکارکرنا دۆخێ نوکە یێ ${popName} پێویستییەکا ڕاستەقینەیە ژ بۆ پێشخستنا ئاستی فێربوون و کارکردن دا.`,
+1544: 
+1545:     problemStatementText: `دیارکرنا ئاریشا توێژینەوەیێ (Problem Statement)\n\nسەرەڕای گرنگییا ئاشکرا یا بابەتێ "${cleanTopic}"، هێشتا ئاریشەیەکی زانستییا دیارکری و ڕوون هەیە پەیوەندیدار ب ئاستێ جێبەجێکردن و هۆشیاری لای ${popName} د ${locName} دا. بەڵگەیێن سەرەتایی دیار دکەن کو کارپێکرنەکان لە ئاستی ئارەزووکراو و زانستیدا نییە.\n\nئەڤ ئاریشەیە بە ڕوونی دەردەکەڤیت کاتێ ${popName} ڕوبەڕووی ئاستەنگێن میتۆدی و ئامرازی ببنەڤە. توێژینەوەیێن پێشتر د شەرجۆڤەیێ ${locName} دا ب تەمامی تیشک نەکێشایە سەر فاکتەرێن دیمۆگرافی کو کاریگەریێ ل سەر ڤی گۆڕاوی دەکەن.\n\nئەگەر ئەڤ ئاریشەیە بەردەوام بیت و چارەسەری ئەکادیمی بۆ نەدۆزرێتەوە، کاریگەرییا نەرێنی دابین دەکات. لەوما، ئەڤ توێژینەوەیە ب پێویستییەکا زانستی دهێتە دانان ژ بۆ دیارکرنا ئەگەرێن سەرەکی یێن ئاریشەیێ.`,
+1546: 
+1547:     purposeText: `ئارمانجا سەرەکی یا ڤێ توێژینەوەیێ بریتییە ژ هەڵسەنگاندن، شیکارکرن، و دەستنیشانکرنا ئاستێ ڕاستەقینە یێ بابەتێ "${cleanTopic}" لای ${popName} د ${locName} دا، و دیارکرنا کاریگەرییا گۆڕاوە دیمۆگرافییەکان ل سەر گەشەپێدانی کارپێکرنە زانستییەکان.`,
+1548: 
+1549:     objectivesText: `ئارمانجا گشتی:\nهەڵسەنگاندن و شیکارکرنا ئەکادیمی و مەیدانی یا بابەتێ "${cleanTopic}".\n\nئارمانجێن دیارکراو:\n١. دیارکرنا ئاستێ بنەڕەتی یێ بابەتێ "${cleanTopic}" لای ${popName} د ${locName} دا.\n٢. دیارکرنا پەیوەندییا دناڤبەرا فاکتەرێن دیمۆگرافی و ئاستێ هۆشیارییا توێژینەوەیێ.\n٣. دیارکرنا ئاستەنگێن سەرەکی یێن ڕێگریێ دکەن د پەیڕەوکرنا شێوازێن نوێ دا.\n٤. پێشکەشکرنا ڕاسپاردەیێن ئەکادیمی ژ بۆ بڕیاربدەران د ${locName} دا.`,
+1550: 
