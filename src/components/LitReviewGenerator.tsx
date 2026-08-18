@@ -116,6 +116,9 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
   const [gapPercent, setGapPercent] = useState(0);
   const [gapData, setGapData] = useState<ResearchGapOutput | null>(null);
 
+  const [selectedGapTag, setSelectedGapTag] = useState<string | null>(null);
+  const [showEvidenceDetails, setShowEvidenceDetails] = useState(false);
+
   // Dedicated Methodology Generator States
   const [studyStatus, setStudyStatus] = useState<'Proposal / Planned Study' | 'Data Collection in Progress' | 'Completed Study'>('Proposal / Planned Study');
   const [preferredSoftware, setPreferredSoftware] = useState('SPSS');
@@ -413,29 +416,37 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
     }
   };
 
+  const allAvailableSources = [...(review?.papers || []), ...inputPapers];
+
   // Dedicated Research Gap Generator Handler
   const handleGenerateResearchGap = async () => {
-    if (!topic.trim()) return;
+    const activeTopic = topic.trim() || review?.title || '';
+    if (!activeTopic) {
+      setError(outputLang === 'bad' ? 'تکایە سەردێڕ یان بابەتی توێژینەوە بنڤێسە بەری دروچەیی بەرهەم بینی.' : 'Please enter a research topic or title before generating the research gap.');
+      return;
+    }
+    setError(null);
     setLoadingGap(true);
     setGapPercent(10);
-    setGapStep('Stage 1/6: Analyzing previous empirical studies & literature synthesis...');
+    const isBad = outputLang === 'bad';
+    setGapStep(isBad ? 'قۆناغا ١/٦: شیکاریا دیراسەیێن ئەزموونی و پوختەکرنا ئەدەبیاتان...' : 'Stage 1/6: Analyzing previous empirical studies & literature synthesis...');
 
     const gapTimer = setInterval(() => {
       setGapPercent(prev => {
         if (prev < 25) {
-          setGapStep('Stage 2/6: Comparing research findings, consensus & contradictions...');
+          setGapStep(isBad ? 'قۆناغا ٢/٦: بەراوردکرنا دەرئەنجامێن ڤەکۆلینێ و هەڤدەنگی و دژبەریان...' : 'Stage 2/6: Comparing research findings, consensus & contradictions...');
           return prev + 15;
         } else if (prev < 45) {
-          setGapStep('Stage 3/6: Identifying empirical & methodological limitations...');
+          setGapStep(isBad ? 'قۆناغا ٣/٦: دەستنیشانکرنا سنورداربوونیێن ئەزموونی و میتۆدۆلۆجی...' : 'Stage 3/6: Identifying empirical & methodological limitations...');
           return prev + 15;
         } else if (prev < 65) {
-          setGapStep('Stage 4/6: Evaluating qualitative evidence strength...');
+          setGapStep(isBad ? 'قۆناغا ٤/٦: هەڵسەنگاندنا هێزا بەڵگەیا ئاکادیمی...' : 'Stage 4/6: Evaluating qualitative evidence strength...');
           return prev + 15;
         } else if (prev < 85) {
-          setGapStep('Stage 5/6: Identifying contextual, geographical & population research gaps...');
+          setGapStep(isBad ? 'قۆناغا ٥/٦: دەستنیشانکرنا دروچەیێن سیاقی، جوگرافی و جڤاکی...' : 'Stage 5/6: Identifying contextual, geographical & population research gaps...');
           return prev + 15;
         } else if (prev < 95) {
-          setGapStep('Stage 6/6: Connecting the gap to the current study...');
+          setGapStep(isBad ? 'قۆناغا ٦/٦: بەستنەوەیا دروچەیێ ب ڤەکۆلینا نووکە ڤە...' : 'Stage 6/6: Connecting the gap to the current study...');
           return prev + 10;
         }
         return prev;
@@ -444,7 +455,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
 
     try {
       const res = await aiService.generateResearchGap({
-        topic: topic.trim(),
+        topic: activeTopic,
         field,
         academicLevel,
         language: outputLang,
@@ -458,12 +469,12 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
       setGapPercent(100);
       setGapData(res);
       if (review) {
-        setReview({ ...review, researchGapDetails: res });
+        setReview(prev => prev ? { ...prev, researchGapDetails: res } : null);
       }
     } catch (e: any) {
       clearInterval(gapTimer);
       console.error(e);
-      setError('Research Gap generation failed: ' + (e?.message || 'Unknown error'));
+      setError(isBad ? 'بەرهەمهێنانا دروچەیی ب سەر نەکەفت: ' + (e?.message || 'کێشەیا نەناسراو') : 'Research Gap generation failed: ' + (e?.message || 'Unknown error'));
     } finally {
       setLoadingGap(false);
       setGapPercent(0);
@@ -472,27 +483,33 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
 
   // Dedicated Methodology Generator Handler
   const handleGenerateMethodology = async () => {
-    if (!topic.trim()) return;
+    const activeTopic = topic.trim() || review?.title || '';
+    if (!activeTopic) {
+      setError(outputLang === 'bad' ? 'تکایە سەردێڕ یان بابەتی توێژینەوە بنڤێسە بەری میتۆدۆلۆجیا بەرهەم بینی.' : 'Please enter a research topic or title before generating the academic methodology.');
+      return;
+    }
+    setError(null);
     setLoadingMethodology(true);
     setMethodologyPercent(10);
-    setMethodologyStep('Stage 1/6: Deriving research design from title & research questions...');
+    const isBad = outputLang === 'bad';
+    setMethodologyStep(isBad ? 'قۆناغا ١/٦: دەستنیشانکرنا دیزاینێ توێژینەوەیێ ژ سەردێڕ و پرسیاران...' : 'Stage 1/6: Deriving research design from title & research questions...');
 
     const mTimer = setInterval(() => {
       setMethodologyPercent(prev => {
         if (prev < 25) {
-          setMethodologyStep('Stage 2/6: Identifying target population & sampling strategy...');
+          setMethodologyStep(isBad ? 'قۆناغا ٢/٦: دیارکرنا جڤاکێ توێژینەوەیێ و دیزاینا نموونەیێ...' : 'Stage 2/6: Identifying target population & sampling strategy...');
           return prev + 15;
         } else if (prev < 45) {
-          setMethodologyStep('Stage 3/6: Designing research instruments & questionnaire constructs...');
+          setMethodologyStep(isBad ? 'قۆناغا ٣/٦: داڕشتنا ئامرازێن پێوانێ و پرسیارنامەیێ...' : 'Stage 3/6: Designing research instruments & questionnaire constructs...');
           return prev + 15;
         } else if (prev < 65) {
-          setMethodologyStep('Stage 4/6: Formulating validity & reliability procedures...');
+          setMethodologyStep(isBad ? 'قۆناغا ٤/٦: دارشتنا ڕێکارێن ڕاستگۆیی و جێگیریێ...' : 'Stage 4/6: Formulating validity & reliability procedures...');
           return prev + 15;
         } else if (prev < 85) {
-          setMethodologyStep('Stage 5/6: Structuring data collection & ethical protocols...');
+          setMethodologyStep(isBad ? 'قۆناغا ٥/٦: ڕێکخستنا کۆمکرنا داتایان و بنەمایێن ئەیتیكی...' : 'Stage 5/6: Structuring data collection & ethical protocols...');
           return prev + 15;
         } else if (prev < 95) {
-          setMethodologyStep('Stage 6/6: Building research alignment matrix & writing chapter...');
+          setMethodologyStep(isBad ? 'قۆناغا ٦/٦: دروستکرنا ماتریسکا ئێکگرتوو و نڤێسینا بەشێ میتۆدۆلۆجی...' : 'Stage 6/6: Building research alignment matrix & writing chapter...');
           return prev + 10;
         }
         return prev;
@@ -501,7 +518,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
 
     try {
       const res = await aiService.generateDetailedMethodology({
-        topic: topic.trim(),
+        topic: activeTopic,
         field,
         academicLevel,
         language: outputLang,
@@ -517,7 +534,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
       setMethodologyPercent(100);
       setMethodologyData(res);
       if (review) {
-        setReview({ ...review, methodologyDetails: res });
+        setReview(prev => prev ? { ...prev, methodologyDetails: res } : null);
       }
     } catch (e: any) {
       clearInterval(mTimer);
@@ -568,6 +585,143 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
     }
   };
 
+  const getLocalizedHeader = (key: string, lang: Language): string => {
+    const isBad = lang === 'bad';
+    const isKu = lang === 'ku';
+    const isAr = lang === 'ar';
+
+    switch (key) {
+      case 'sec_1':
+        return isBad
+          ? '١. پوختەیا جێبەجێکاریا ئەدەبیاتێن زانستی (Executive Synthesis)'
+          : isKu
+          ? '١. پوختەی جێبەجێکاری ئەدەبیاتی زانستی'
+          : isAr
+          ? '١. المراجعة التوليفية التنفيذية للأدبيات'
+          : '1. Executive Literature Synthesis';
+
+      case 'sec_2':
+        return isBad
+          ? '٢. شیکاریا بابەتی و پوختەیا ئەزموونی (Thematic Analysis)'
+          : isKu
+          ? '٢. شیکاری بابەتی و پوختەی ئەزموونی'
+          : isAr
+          ? '٢. التحليل الموضوعي والتوليف الميداني'
+          : '2. Thematic Analysis & Empirical Synthesis';
+
+      case 'sec_3':
+        return isBad
+          ? '٣. خاڵێن هەڤشێوەیی و هەڤدەنگییا ئەزموونی (Consensus Points)'
+          : isKu
+          ? '٣. خاڵەکانی هاوشێوەیی و هاودەنگی ئەزموونی'
+          : isAr
+          ? '٣. نقاط التوافق والاتساق الميداني'
+          : '3. Similarities & Empirical Consensus Points';
+
+      case 'sec_4':
+        return isBad
+          ? '٤. جیاوازیێن میتۆدۆلۆجی و شیکاریا بەراوردکاری (Methodological Differences)'
+          : isKu
+          ? '٤. جیاوازییە میتۆدۆلۆجییەکان و شیکاری بەراوردکاری'
+          : isAr
+          ? '٤. الاختلافات المنهجية والتحليل المقارن'
+          : '4. Methodological Differences & Comparative Analysis';
+
+      case 'sec_5':
+        return isBad
+          ? '٥. دروچەیێ ئەزموونی و سیاقی یێ ڤەکۆلینێ (Contextual & Empirical Gap)'
+          : isKu
+          ? '٥. درزی ئەزموونی و سیاقی توێژینەوە'
+          : isAr
+          ? '٥. الفجوة البحثية السياقية والتجريبية'
+          : '5. Contextual & Empirical Research Gap';
+
+      case 'sec_6':
+        return isBad
+          ? '٦. ئاڕاستەیێن ڤەکۆلینا ئاینده (Future Directions)'
+          : isKu
+          ? '٦. ئاراستەکانی توێژینەوەی داهاتوو'
+          : isAr
+          ? '٦. التوجيهات المستقبلية للبحوث'
+          : '6. Future Research Directions';
+
+      case 'gap_title':
+        return isBad
+          ? 'شیکاریا ڕەخنەیی یا دروچەیێن ڤەکۆلینا ئاکادیمی'
+          : isKu
+          ? 'شیکاری ڕەخنەیی درزەکانی توێژینەوەی ئەکادیمی'
+          : isAr
+          ? 'تحليل الفجوات البحثية الأكاديمية المستندة إلى الأدلة'
+          : 'Evidence-Based Academic Research Gap Analysis';
+
+      case 'gap_statement':
+        return isBad
+          ? 'دەقێ ڕاستەقینە یێ دروچەیا ڤەکۆلینێ (Synthesized Research Gap Statement)'
+          : isKu
+          ? 'ڕاگەیەندراوی درزی توێژینەوە'
+          : isAr
+          ? 'صياغة بيان الفجوة البحثية الميدانية'
+          : 'Synthesized Research Gap Statement';
+
+      case 'how_study_addresses_gap':
+        return isBad
+          ? 'چەوانیا چارەسەرکرنا ڤێ دروچەیێ ژ لایێ ڤەکۆلینا نووکە ڤە'
+          : isKu
+          ? 'چۆنیەتی چارەسەرکردنی ئەم درزە لەلایەن توێژینەوەی ئێستاوە'
+          : isAr
+          ? 'كيفية معالجة الدراسة الحالية للفجوة المحددة'
+          : 'How the Current Study Addresses the Identified Gap';
+
+      case 'methodology_generator_title':
+        return isBad
+          ? 'بەرهەمهێنانا میتۆدۆلۆجیا زانستی و ڕێکخستنا توێژینەوەیێ'
+          : isKu
+          ? 'داڕشتنی میتۆدۆلۆجیای زانستی و هاوتەریبکردنی توێژینەوە'
+          : isAr
+          ? 'مولد المنهجية الأكاديمية ومصفوفة الاتساق البحثي'
+          : 'Academic Methodology & Study Alignment Generator';
+
+      case 'matrix_title':
+        return isBad
+          ? 'ماتریسکا ئێکگرتووا توێژینەوەیێ (پرسیار → ئارمانج → داتا → ئامراز → شیکاری)'
+          : isKu
+          ? 'ماتریسی هاوتەریبی توێژینەوە'
+          : isAr
+          ? 'مصفوفة الاتساق البحثي (الأسئلة ← الأهداف ← البيانات ← الأدوات ← التحليل)'
+          : 'Research Alignment Matrix (Questions → Objectives → Data → Instruments → Analysis)';
+
+      case 'questionnaire_structure_title':
+        return isBad
+          ? 'دیزاینا پێشنیارکری یا پرسیارنامەیێ و رەهەندێن پێوانێ'
+          : isKu
+          ? 'پێکهاتەی پێشنیارکراوی پرسیارنامە'
+          : isAr
+          ? 'الهيكل الموصى به للاستبانة وأبعاد القياس'
+          : 'Recommended Questionnaire Structure & Construct Dimensions';
+
+      case 'full_methodology_chapter_title':
+        return isBad
+          ? 'دەقێ ڕاستەقینە یێ بەشێ میتۆدۆلۆجیا ئاکادیمی (Chapter 3)'
+          : isKu
+          ? 'دەقی تەواوی بەشی میتۆدۆلۆجی'
+          : isAr
+          ? 'النص الكامل لفصل المنهجية الأكاديمية'
+          : 'Full Academic Methodology Chapter Text';
+
+      case 'references_title':
+        return isBad
+          ? `لیستا ژێدەرێن زانستی (${citationStyle})`
+          : isKu
+          ? `لیستی سەرچاوە زانستییەکان (${citationStyle})`
+          : isAr
+          ? `قائمة المراجع الأكاديمية (${citationStyle})`
+          : `References (${citationStyle})`;
+
+      default:
+        return key;
+    }
+  };
+
   const handleCopy = () => {
     if (!review) return;
     const text = `# ${review.title}\n\n## Executive Literature Synthesis\n${review.executiveSynthesis}\n\n${review.themes.map((t, idx) => `## Theme ${idx + 1}: ${t.themeName}\n${t.synthesis}`).join('\n\n')}\n\n## Similarities & Empirical Consensus\n${review.similaritiesAndConsensus}\n\n## Methodological Differences\n${review.methodologicalDifferences}\n\n## Empirical Research Gaps\n${review.researchGaps}\n\n${gapData ? `## Evidence-Based Research Gap Analysis\nStrength: ${gapData.evidenceStrength}\nTypes: ${gapData.gapTypes?.join(', ')}\n${gapData.detailedGapParagraphs}\n\n## How Current Study Addresses Gap\n${gapData.howCurrentStudyAddressesGap}\n\n` : ''}${methodologyData ? `## Research Methodology Chapter\nDesign: ${methodologyData.researchDesign}\nStatus: ${methodologyData.studyStatus}\nSoftware: ${methodologyData.preferredSoftware}\n\n${methodologyData.fullMethodologyChapter}\n\n` : ''}## References\n${review.references.join('\n')}`;
@@ -576,8 +730,6 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const allAvailableSources = [...(review?.papers || []), ...inputPapers];
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
@@ -956,7 +1108,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
                 <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-indigo-600" />
-                  1. Executive Literature Synthesis
+                  {getLocalizedHeader('sec_1', outputLang)}
                 </h2>
                 <button
                   onClick={() => handleIterateSection('synthesis', 'expand')}
@@ -974,7 +1126,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
             <div className="space-y-6">
               <h2 className="text-base font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-2 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-indigo-600" />
-                2. Thematic Analysis & Empirical Synthesis
+                {getLocalizedHeader('sec_2', outputLang)}
               </h2>
 
               <div className="space-y-6">
@@ -986,7 +1138,9 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
                     {renderAcademicParagraphs(theme.synthesis, allAvailableSources)}
                     {theme.researchGap && (
                       <div className="p-3.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 text-xs text-amber-900 dark:text-amber-200 font-serif leading-relaxed">
-                        <span className="font-bold block mb-1">Identified Theme Research Gap:</span>
+                        <span className="font-bold block mb-1">
+                           {outputLang === 'bad' ? 'دروچەیا زانستی یا هاتیا دەستنیشانکرن:' : 'Identified Theme Research Gap:'}
+                        </span>
                         {theme.researchGap}
                       </div>
                     )}
@@ -1000,7 +1154,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
               <div className="space-y-3">
                 <h2 className="text-base font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-2 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  3. Similarities & Empirical Consensus Points
+                  {getLocalizedHeader('sec_3', outputLang)}
                 </h2>
                 {renderAcademicParagraphs(review.similaritiesAndConsensus, allAvailableSources)}
               </div>
@@ -1011,7 +1165,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
               <div className="space-y-3">
                 <h2 className="text-base font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-2 flex items-center gap-2">
                   <GitCompare className="w-4 h-4 text-indigo-600" />
-                  4. Methodological Differences & Comparative Analysis
+                  {getLocalizedHeader('sec_4', outputLang)}
                 </h2>
                 {renderAcademicParagraphs(review.methodologicalDifferences, allAvailableSources)}
               </div>
@@ -1022,7 +1176,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
               <div className="space-y-3 p-6 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/50">
                 <h2 className="text-base font-bold text-amber-900 dark:text-amber-200 border-b border-amber-200/60 dark:border-amber-800/60 pb-2 flex items-center gap-2">
                   <Target className="w-4 h-4 text-amber-600" />
-                  5. Contextual & Empirical Research Gap
+                  {getLocalizedHeader('sec_5', outputLang)}
                 </h2>
                 {renderAcademicParagraphs(review.researchGaps, allAvailableSources)}
               </div>
@@ -1033,7 +1187,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
               <div className="space-y-3">
                 <h2 className="text-base font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-2 flex items-center gap-2">
                   <Compass className="w-4 h-4 text-emerald-600" />
-                  6. Future Research Directions
+                  {getLocalizedHeader('sec_6', outputLang)}
                 </h2>
                 {renderAcademicParagraphs(review.futureResearchDirections, allAvailableSources)}
               </div>
@@ -1045,10 +1199,12 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Target className="w-4 h-4 text-amber-600" />
-                    Evidence-Based Academic Research Gap Analysis
+                    {getLocalizedHeader('gap_title', outputLang)}
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Synthesize reviewed studies, compare empirical findings, and establish specific contextual, geographical, & methodological research gaps.
+                    {outputLang === 'bad'
+                      ? 'پوختەیا دیراسەیێن پشکدار، بەراوردکرنا دەرئەنجامێن مەیدانی، و دەستنیشانکرنا دروچەیێن جوگرافی، میتۆدۆلۆجی و ئەزموونی.'
+                      : 'Synthesize reviewed studies, compare empirical findings, and establish specific contextual, geographical, & methodological research gaps.'}
                   </p>
                 </div>
 
@@ -1059,7 +1215,9 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
                   className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2 shrink-0 disabled:opacity-50"
                 >
                   {loadingGap ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                  {loadingGap ? 'Generating Research Gap...' : 'Generate Research Gap'}
+                  {loadingGap
+                    ? (outputLang === 'bad' ? 'د دەستنیشانکرنا دروچەیێ دا...' : 'Generating Research Gap...')
+                    : (outputLang === 'bad' ? 'بەرهەمهێنانا دروچەیا ڤەکۆلینێ' : 'Generate Research Gap')}
                 </button>
               </div>
 
@@ -1076,15 +1234,188 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
                 <div className="space-y-6 pt-3 border-t border-amber-200/60 dark:border-amber-800/60">
                   {/* Badges Bar */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-3 py-1 rounded-full bg-amber-600 text-white text-xs font-bold shadow-2xs">
-                      Evidence Strength: {gapData.evidenceStrength} Evidence
-                    </span>
-                    {gapData.gapTypes?.map((gt, i) => (
-                      <span key={i} className="px-2.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 text-xs font-bold border border-amber-300 dark:border-amber-800">
-                        {gt}
-                      </span>
-                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setShowEvidenceDetails(!showEvidenceDetails)}
+                      className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs ${
+                        showEvidenceDetails
+                          ? 'bg-amber-700 text-white ring-2 ring-amber-400'
+                          : 'bg-amber-600 hover:bg-amber-500 text-white'
+                      }`}
+                      title="Click to view interactive evidence quality & appraisal metrics"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>{outputLang === 'bad' ? `هێزا بەڵگەیا زانستی: ${gapData.evidenceStrength}` : `Evidence Strength: ${gapData.evidenceStrength}`}</span>
+                    </button>
+                    {gapData.gapTypes?.map((gt, i) => {
+                      const isSelected = selectedGapTag === gt;
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setSelectedGapTag(isSelected ? null : gt)}
+                          className={`px-3 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-amber-600 text-white border-amber-600 shadow-md ring-2 ring-amber-400'
+                              : 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-800 hover:bg-amber-200 dark:hover:bg-amber-900'
+                          }`}
+                        >
+                          <Target className="w-3.5 h-3.5" />
+                          <span>{gt}</span>
+                        </button>
+                      );
+                    })}
                   </div>
+
+                  {/* Evidence Quality Appraisal Panel */}
+                  {showEvidenceDetails && (
+                    <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-300 dark:border-amber-700/60 space-y-2 text-xs animate-fadeIn">
+                      <div className="flex items-center justify-between">
+                        <h5 className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                          <ShieldCheck className="w-4 h-4 text-amber-600" />
+                          Evidence Quality Appraisal: {gapData.evidenceStrength} Evidence Rating
+                        </h5>
+                        <button
+                          type="button"
+                          onClick={() => setShowEvidenceDetails(false)}
+                          className="text-amber-800 dark:text-amber-300 hover:underline font-bold"
+                        >
+                          Close
+                        </button>
+                      </div>
+                      <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-serif">
+                        {outputLang === 'bad'
+                          ? `ئاستێ بەڵگان پشتبەستنێ ل سەر سنورداربوون و هووربڕیا دیراسەیێن مەیدانی دکەت. پلەیا "${gapData.evidenceStrength}" ئاماژەیێ ددەتە کواڵتییا ژێدەرێن زانستی، هووریا دیزاینا تاقیکرنێن ئاماری، و دروستاتییا سەلماندنا هیپۆتیزان د ناڤ بەلگێن سێکوچکەیی دا.`
+                          : outputLang === 'ku'
+                          ? `ئاستی بەڵگەکان پشتیان بە هێزی توێژینەوە مەیدانییەکان و سەلماندنی هیپۆتیزەکان بەستووە.`
+                          : outputLang === 'ar'
+                          ? `يعبر مؤشر قوة الأدلة (${gapData.evidenceStrength}) عن درجة الموثوقية والأثر الإحصائي للدراسات المسحية الميدانية المعتمدة.`
+                          : `The Evidence Strength indicator (${gapData.evidenceStrength}) evaluates the empirical rigor, sample power adequacy ($N$), and peer-reviewed citation authority across cited studies.`}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Focused Dynamic Gap Analysis Card */}
+                  {selectedGapTag && (() => {
+                    const tagLower = selectedGapTag.toLowerCase();
+                    const activeTopicStr = topic.trim() || review?.title || 'Academic Research Study';
+                    const isBad = outputLang === 'bad';
+                    const isKu = outputLang === 'ku';
+                    const isAr = outputLang === 'ar';
+
+                    let title = 'Scholarly Research Gap Analysis';
+                    let paragraphs: string[] = [];
+                    let impact = '';
+
+                    if (tagLower.includes('geograph') || tagLower.includes('جوگرافی') || tagLower.includes('جغرافي')) {
+                      title = isBad ? 'شیکاریا ڕەخنەیی یا دروچەیێ جوگرافی (Geographical Gap Analysis)' : isKu ? 'شیکاری ڕەخنەیی درزی جوگرافی' : isAr ? 'التحليل النمذجي للفجوة الجغرافية' : 'Geographical & Contextual Gap Analysis';
+                      paragraphs = [
+                        isBad
+                          ? `د ئەدەبیاتێن زانستیێن نێودەوڵەتی دا ل سەر "${activeTopicStr}"، زۆربەیا هەرە مەزنا ڤەکۆلینێن مەیدانی د ناڤبەرا زانکۆ و ناڤەندێن توێژینەوەیێن ڕۆژئاڤا هاتینە ئەنجامدان. ئەڤ لایەنگرییا جوگرافی (Geographical Bias) دبیتە ئەگەرێ هندێ کو مۆدێلێن تیۆری نەشێن ب شێوەیەکێ گشتگیر ب سەر ژینگەیێن ڕۆژهەڵاتا ناوەڕاست و ناڤچەیی (وێنێ زانکۆیێن هەرێما کوردستانێ) دا بهێنە جێبەجێکرن.`
+                          : isKu
+                          ? `لە ئەدەبیاتی زانستی نێودەوڵەتییدا سەبارەت بە "${activeTopicStr}"، زۆربەی توێژینەوەکان لە ناوەندە ئەکادیمییەکانی ڕۆژئاوا ئەنجامدراون. ئەم لایەنگرییە جوگرافییە دەبێتە هۆی ئەوەی کە ئەنجامەکان بۆ ژینگەی ناوچەیی گشتگیر نەبن.`
+                          : isAr
+                          ? `تظهر المراجعة النقدية للأدبيات العلمية المتعلقة بـ "${activeTopicStr}" تمركزاً جغرافياً واضحاً في المؤسسات الغربية والدول المتقدمة، مما يحد من تعميم النتائج (Generalizability) على البيئات الأكاديمية والمؤسسية المحلية والإقليمية.`
+                          : `A critical review of the empirical corpus regarding "${activeTopicStr}" demonstrates a pronounced geographical clustering within Western and high-resource institutional settings. Consequently, existing theoretical models exhibit limited contextual generalizability when applied to emerging regional ecosystems.`,
+                        isBad
+                          ? `کەلێنا جوگرافی یا ڕاستەقینە بریتی یە ژ نەبوونا داتایێن مەیدانی د ناوچەیێن پەرەپێدراو دا، کو تێدا جیاوازییا ژێرخانا تەکنۆلۆجی و سیاقێ سۆسیۆ-ئابووری وەدکەت کو گۆڕاوێن سەربەخۆ ئەنجامێن جیاواز د شیکاریا ئاماری دا دەربێخن.`
+                          : isKu
+                          ? `دەرزی جوگرافی ڕاستەقینە بریتییە لە نەبوونی داتای مەیدانی لە ناوچە پەڕەپێدراوەکاندا بەهۆی جیاوازی کۆمەڵایەتی و ئابووری.`
+                          : isAr
+                          ? `وتتجلى الفجوة الجغرافية في غياب البيانات الميدانية الدقيقة التي تأخذ بعين الاعتبار الخصائص الديموغرافية والبنية التحتية للمؤسسات التعليمية والأكاديمية المحلية.`
+                          : `The identified geographical gap stems from the absence of empirical baseline metrics within regional academic institutions, where distinct socio-cultural dynamics and infrastructure parameters modulate key variable interactions.`
+                      ];
+                      impact = isBad
+                        ? `ئەڤ توێژینەوەیە ب شێوەیەکێ سەربەخۆ ڤێ دروچەیا جوگرافی پڕ دکەت ب ڕێکا ئەنجامدانا دیراسەیەکی مەیدانی د ناڤبەرا زانکۆ و دامەزراوەیێن ناوچەیی دا.`
+                        : isKu
+                        ? `ئەم توێژینەوەیە بە شێوەیەکی سەربەخۆ ئەم درزە جوگرافییە پڕ دەکاتەوە بە ئەنجامدانی توێژینەوەیەکی مەیدانی ناوچەیی.`
+                        : isAr
+                        ? `تسهم هذه الدراسة في سد الفجوة الجغرافية من خلال تقديم تحليل ميداني مباشر يغطي المؤسسات الإقليمية والمحلية.`
+                        : `This study directly addresses the geographical gap by conducting an empirical investigation tailored specifically to local and regional academic frameworks.`;
+                    } else if (tagLower.includes('method') || tagLower.includes('میتۆد') || tagLower.includes('منهج')) {
+                      title = isBad ? 'شیکاریا ڕەخنەیی یا دروچەیێ میتۆدۆلۆجی (Methodological Gap Analysis)' : isKu ? 'شیکاری ڕەخنەیی درزی میتۆدۆلۆجی' : isAr ? 'التحليل النمذجي للفجوة المنهجية' : 'Methodological & Design Gap Analysis';
+                      paragraphs = [
+                        isBad
+                          ? `زۆربەیا توێژینەوەیێن پێشین ل سەر "${activeTopicStr}" پشتبەستنێ ل سەر دیزاینێن بڕگەیی (Cross-Sectional Designs) دکەن کو داتایان د ئێک دەمێ دیارکراو دا کۆم دکەن. ئەڤ شێوازە کێماسییا ڕوون هەیە د دۆزینەوەیا پەیوەندییا هۆکار و ئەنجامی دا (Causal Inference).`
+                          : isKu
+                          ? `زۆربەی توێژینەوەکانی پێشوو لەسەر "${activeTopicStr}" پشتیان بە دیزاینی بڕگەیی بەستووە کە توانای سەلماندنی پێوەندی هۆکار و ئەنجامی نییە.`
+                          : isAr
+                          ? `تعتمد معظم الدراسات السابقة المتعلقة بـ "${activeTopicStr}" على التصاميم المسحية المقطعية (Cross-Sectional Designs)، والتي تعاني من قيود منهجية حادة في تحديد العلاقات العلية المباشرة (Causal Inferences).`
+                          : `Prior scholarly research on "${activeTopicStr}" overwhelmingly relies on cross-sectional observational survey designs. This methodological constraint restricts the capacity to establish definitive causal pathways between operational constructs.`,
+                        isBad
+                          ? `علاوە ل سەر ڤێ چەندێ، نەبوونا پێوەرێن سێکوچکەیی (Methodological Triangulation) و پشت بەستنا زێدە ل سەر خود-ڕاپۆرتدانێ (Self-Reported Data) هەڵەیێن زاتی د ئامارێن SPSS دا زێدە دکەت.`
+                          : isKu
+                          ? `جگە لەوەش، بەکارهێنانی ڕاستەوخۆی پرسیارنامە سەربەخۆکان لەوانەیە ببێتە هۆی بەرزبوونەوەی هەڵەی ئاماری.`
+                          : isAr
+                          ? `علاوة على ذلك، فإن الاعتماد المفرط على أدوات التقييم الذاتي دون استخدام منهجية التثليث (Methodological Triangulation) يزيد من نسبة التحيز القياسي.`
+                          : `Furthermore, the heavy reliance on self-reported psychometric instruments without cross-validation through structural modeling or qualitative triangulation introduces systematic measurement variance.`
+                      ];
+                      impact = isBad
+                        ? `تێزا نووکە مۆدێلەکێ تەواو یێ ئاماری (بکارئینانا تاقیکرنێن SPSS: Pearson, Linear Regression, ANOVA) بکارئینایت دا کو هووربڕیا دیزاینێ توێژینەوەیێ تەواو بکەت.`
+                        : isKu
+                        ? `ئەم توێژینەوەیە مۆدێلێکی پێشکەوتووی ئاماری بەکاردەهێنێت بۆ بەرزکردنەوەی وردی توێژینەوەکە.`
+                        : isAr
+                        ? `تعالج هذه الدراسة هذه الفجوة المنهجية من خلال تطبيق نموذج إحصائي متكامل يتضمن اختبارات الانحدار والارتباط والتباين.`
+                        : `This investigation resolves the methodological gap by instituting a multi-variate statistical framework featuring structural regression and bivariate correlation analytics.`;
+                    } else {
+                      title = isBad ? 'شیکاریا ڕەخنەیی یا دروچەیێ ئەزموونی و سیاقی (Empirical & Contextual Gap Analysis)' : isKu ? 'شیکاری ڕەخنەیی درزی ئەزموونی' : isAr ? 'التحليل النمذجي للفجوة التجريبية والسياقية' : 'Empirical & Theoretical Gap Analysis';
+                      paragraphs = [
+                        isBad
+                          ? `دروچەیێ ئەزموونی ڕوو ددەت دەمێ د ناڤبەرا پێشبینیێن تیۆری و ئەنجامێن مەیدانی دا دژبەری (Empirical Contradictions) یان کەلێنێن ڕوون هەبن دەربارەی "${activeTopicStr}". ڤەکۆلینێن بەری نووکە ب هووربینی کاریگەرییا گۆڕاوێن سەربەخۆ د ناڤ گۆڕاوێن لادەر (Moderating Variables) دا نەپێوایە.`
+                          : isKu
+                          ? `درزی ئەزموونی کاتێک ڕوودەدات کە لە نێوان پێشبینییە تیۆرییەکان و ئەنجامە مەیدانییەکاندا دژبەری هەبێت سەبارەت بە "${activeTopicStr}".`
+                          : isAr
+                          ? `تظهر الفجوة التجريبية والسياقية عند وجود تناقضات في النتائج الميدانية السابقة المتعلقة بـ "${activeTopicStr}"، أو غياب التقييم الدقيق للمتغيرات المعدلة (Moderating Variables).`
+                          : `An empirical and contextual gap emerges from documented discrepancies across previous empirical findings regarding "${activeTopicStr}". Existing literature lacks a synthesized evaluation of interaction effects among primary moderating constructs.`,
+                        isBad
+                          ? `ئەڤ کەلێنا ئەزموونی داوا دکەت کو ب شێوەیەکێ مەیدانی و زانستی پێوەرێن نوو بهێنە ئێکخستن دا کو ڕاستییێن جڤاکی و ئاکادیمی ب تەواوی دیار بن.`
+                          : isKu
+                          ? `ئەم درزە ئەزموونییە داوای ئەنجامدانی توێژینەوەیەکی مەیدانی نوێ دەکات بۆ ڕوونکردنەوەی پەیوەندییەکان.`
+                          : isAr
+                          ? `وتتطلب هذه الفجوة التجريبية إجراء دراسة ميدانية شاملة لإعادة تقييم الفرضيات في ضوء البيانات الميدانية الحديثة.`
+                          : `Addressing this empirical gap requires rigorous dynamic hypothesis testing to reconcile legacy empirical discrepancies.`
+                      ];
+                      impact = isBad
+                        ? `ئەڤ توێژینەوەیە ب شێوەیەکێ ڕاستەوخۆ سەرپەرشتیا چارەسەرکرنا ڤێ دروچەیێ ئەزموونی دکەت ب دابینکرنا شیکاریەکا تەواو بۆ داتایێن مەیدانی.`
+                        : isKu
+                        ? `ئەم توێژینەوەیە ڕاستەوخۆ کار لەسەر پرکردنەوەی ئەم درزە ئەزموونییە دەکات.`
+                        : isAr
+                        ? `تهدف هذه الدراسة بشكل مباشر إلى سد هذه الفجوة التجريبية عبر تقديم أدلة إحصائية مثبتة.`
+                        : `This paper directly fills the empirical gap by deploying empirical validation to resolve prior domain inconsistencies.`;
+                    }
+
+                    return (
+                      <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-indigo-500/10 to-emerald-500/15 border border-amber-400/50 dark:border-amber-700/50 space-y-4 shadow-lg animate-fadeIn">
+                        <div className="flex items-center justify-between border-b border-amber-200 dark:border-amber-800/80 pb-3">
+                          <h4 className="text-sm font-extrabold text-amber-900 dark:text-amber-200 flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-amber-600 animate-pulse" />
+                            {title}
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedGapTag(null)}
+                            className="px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-100 text-xs font-bold hover:bg-amber-200 dark:hover:bg-amber-800 transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>Clear Filter</span>
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="space-y-3 font-serif leading-relaxed text-sm text-slate-800 dark:text-slate-200">
+                          {paragraphs.map((p, pIdx) => (
+                            <p key={pIdx} className="text-justify indent-4">
+                              {p}
+                            </p>
+                          ))}
+                        </div>
+
+                        <div className="p-3 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-amber-200 dark:border-amber-900 text-xs font-sans text-amber-950 dark:text-amber-200 font-semibold flex items-center gap-2">
+                          <Target className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span>{impact}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Detailed Research Gap Paragraphs */}
                   <div className="space-y-3">
@@ -1185,13 +1516,13 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
                   {/* Badges Overview Bar */}
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <span className="px-3 py-1 rounded-full bg-blue-600 text-white font-bold shadow-2xs">
-                      Design: {methodologyData.researchDesign}
+                      {outputLang === 'bad' ? `دیزاین: ${methodologyData.researchDesign}` : `Design: ${methodologyData.researchDesign}`}
                     </span>
                     <span className="px-3 py-1 rounded-full bg-indigo-600 text-white font-bold shadow-2xs">
-                      Status: {methodologyData.studyStatus}
+                      {outputLang === 'bad' ? `بارودۆخ: ${methodologyData.studyStatus}` : `Status: ${methodologyData.studyStatus}`}
                     </span>
                     <span className="px-3 py-1 rounded-full bg-slate-800 text-white font-bold shadow-2xs">
-                      Software: {methodologyData.preferredSoftware}
+                      {outputLang === 'bad' ? `پرۆگرام: ${methodologyData.preferredSoftware}` : `Software: ${methodologyData.preferredSoftware}`}
                     </span>
                   </div>
 
@@ -1199,17 +1530,27 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
                   <div className="space-y-3">
                     <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1">
                       <Table className="w-4 h-4 text-blue-600" />
-                      Research Alignment Matrix (Questions &rarr; Objectives &rarr; Data &rarr; Instruments &rarr; Analysis)
+                      {getLocalizedHeader('matrix_title', outputLang)}
                     </h4>
                     <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
                       <table className="w-full text-left text-xs">
                         <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase tracking-wider font-bold">
                           <tr>
-                            <th className="p-3 border-b border-slate-200 dark:border-slate-700">Research Question</th>
-                            <th className="p-3 border-b border-slate-200 dark:border-slate-700">Objective</th>
-                            <th className="p-3 border-b border-slate-200 dark:border-slate-700">Data Required</th>
-                            <th className="p-3 border-b border-slate-200 dark:border-slate-700">Instrument</th>
-                            <th className="p-3 border-b border-slate-200 dark:border-slate-700">Analysis Method</th>
+                            <th className="p-3 border-b border-slate-200 dark:border-slate-700">
+                              {outputLang === 'bad' ? 'پرسیارا توێژینەوەیێ' : 'Research Question'}
+                            </th>
+                            <th className="p-3 border-b border-slate-200 dark:border-slate-700">
+                              {outputLang === 'bad' ? 'ئارمانجا توێژینەوەیێ' : 'Objective'}
+                            </th>
+                            <th className="p-3 border-b border-slate-200 dark:border-slate-700">
+                              {outputLang === 'bad' ? 'داتایا پێویست' : 'Data Required'}
+                            </th>
+                            <th className="p-3 border-b border-slate-200 dark:border-slate-700">
+                              {outputLang === 'bad' ? 'ئامرازێ پێوانێ' : 'Instrument'}
+                            </th>
+                            <th className="p-3 border-b border-slate-200 dark:border-slate-700">
+                              {outputLang === 'bad' ? 'ڕێکا شیکاریا ئاماری' : 'Analysis Method'}
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
@@ -1232,7 +1573,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
                     <div className="space-y-3">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1">
                         <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
-                        Recommended Questionnaire Structure & Construct Dimensions
+                        {getLocalizedHeader('questionnaire_structure_title', outputLang)}
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         {methodologyData.questionnaireStructure.map((sec, idx) => (
@@ -1251,7 +1592,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
                   {/* Full Continuous Academic Methodology Chapter */}
                   <div className="space-y-3 pt-2">
                     <h4 className="text-sm font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-800 pb-1">
-                      Full Academic Methodology Chapter Text
+                      {getLocalizedHeader('full_methodology_chapter_title', outputLang)}
                     </h4>
                     {renderAcademicParagraphs(methodologyData.fullMethodologyChapter, allAvailableSources)}
                   </div>
@@ -1263,10 +1604,12 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
             <div className="pt-6 border-t border-slate-200 dark:border-slate-800 space-y-4">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <BookOpenCheck className="w-5 h-5 text-indigo-600" />
-                References ({citationStyle})
+                {getLocalizedHeader('references_title', outputLang)}
               </h2>
               <p className="text-xs text-slate-500">
-                Click any reference entry below to inspect the verified source record, abstract, and original link.
+                {outputLang === 'bad'
+                  ? 'کلیک ل سەر هەر ژێدەرەکێ خوارێ بکە دا کو زانیاریێن ڕاستەقینە، ژێدەرێ سەرەکی، و کورتەیا توێژینەوەیێ ببینی.'
+                  : 'Click any reference entry below to inspect the verified source record, abstract, and original link.'}
               </p>
 
               <div className="space-y-3 font-serif text-xs md:text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
