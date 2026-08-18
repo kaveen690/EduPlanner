@@ -42,8 +42,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState(currentUser?.name || '');
-  const [institution, setInstitution] = useState(currentUser?.institution || 'College of Higher Studies & Research');
-  const [academicLevel, setAcademicLevel] = useState(currentUser?.academicLevel || 'Faculty / Senior Researcher');
+  const [institution, setInstitution] = useState(currentUser?.institution || '');
+  const [academicLevel, setAcademicLevel] = useState(currentUser?.academicLevel || '');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -57,13 +57,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const { user, error } = await supabaseAuth.signInWithEmail(email, password);
     setLoading(false);
 
-    if (error) {
-      setErrorMessage(error.message);
-      onShowToast('error', 'Authentication Failed', error.message);
-    } else if (user) {
+    if (user) {
       onUserUpdated(user);
       onShowToast('success', 'Welcome Back!', `Signed in as ${user.name}`);
       onClose();
+    } else if (error) {
+      setErrorMessage(error.message);
+      onShowToast('error', 'Authentication Failed', error.message);
     }
   };
 
@@ -372,7 +372,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800"></div>
               </div>
 
-              <form onSubmit={mode === 'signin' ? handleSignIn : handleSignUp} className="space-y-3">
+              <form onSubmit={mode === 'signin' ? handleSignIn : handleSignUp} className="space-y-3" autoComplete="off">
                 {mode === 'signup' && (
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -384,7 +384,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Kaveen Hussein"
+                        placeholder="e.g. Academic Researcher"
+                        autoComplete="off"
                         className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         required
                       />
@@ -402,7 +403,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="kaveen.hussein@uod.ac"
+                      placeholder="academic.email@university.edu"
+                      autoComplete="off"
                       className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       required
                     />
@@ -431,6 +433,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
+                      autoComplete="new-password"
                       className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       required
                       minLength={6}
