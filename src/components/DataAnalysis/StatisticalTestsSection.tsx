@@ -438,15 +438,120 @@ export const StatisticalTestsSection: React.FC<StatisticalTestsSectionProps> = (
                   </div>
                 )}
 
-                {selectedTest === 'reliability' && (
-                  <div className="space-y-2 text-slate-200">
-                    <p className="text-xs font-bold">Reliability Statistics</p>
-                    <div className="flex gap-6 text-sm font-mono">
-                      <span>Items: {activeResult.data.itemCount}</span>
-                      <span className={`font-bold ${activeResult.data.cronbachAlpha >= 0.7 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        Cronbach's Alpha α = {activeResult.data.cronbachAlpha}
-                      </span>
+                {selectedTest === 'paired_ttest' && (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs font-bold text-slate-300 mb-2 font-serif">Paired Samples Statistics</p>
+                      <table className="w-full text-xs text-start border-collapse">
+                        <thead>
+                          <tr className="border-b-2 border-slate-700 text-slate-300 font-bold">
+                            <th className="p-2 text-start">Pair 1</th>
+                            <th className="p-2 text-center">N</th>
+                            <th className="p-2 text-center">Mean</th>
+                            <th className="p-2 text-center">Std. Deviation</th>
+                            <th className="p-2 text-center">Std. Error Mean</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800 text-slate-200">
+                          <tr>
+                            <td className="p-2 font-semibold">{activeResult.data.group1Name || var1}</td>
+                            <td className="p-2 text-center font-mono">{activeResult.data.group1Count}</td>
+                            <td className="p-2 text-center font-mono text-sky-400 font-bold">{activeResult.data.group1Mean}</td>
+                            <td className="p-2 text-center font-mono">{activeResult.data.group1Sd}</td>
+                            <td className="p-2 text-center font-mono">{(activeResult.data.group1Sd / Math.sqrt(Math.max(1, activeResult.data.group1Count))).toFixed(3)}</td>
+                          </tr>
+                          <tr>
+                            <td className="p-2 font-semibold">{activeResult.data.group2Name || var2}</td>
+                            <td className="p-2 text-center font-mono">{activeResult.data.group2Count}</td>
+                            <td className="p-2 text-center font-mono text-sky-400 font-bold">{activeResult.data.group2Mean}</td>
+                            <td className="p-2 text-center font-mono">{activeResult.data.group2Sd}</td>
+                            <td className="p-2 text-center font-mono">{(activeResult.data.group2Sd / Math.sqrt(Math.max(1, activeResult.data.group2Count))).toFixed(3)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
+
+                    <div>
+                      <p className="text-xs font-bold text-slate-300 mb-2 font-serif">Paired Samples Test (Paired Differences)</p>
+                      <table className="w-full text-xs text-start border-collapse">
+                        <thead>
+                          <tr className="border-b-2 border-slate-700 text-slate-300 font-bold">
+                            <th className="p-2 text-start">Paired Comparison</th>
+                            <th className="p-2 text-center">Mean Difference</th>
+                            <th className="p-2 text-center">t-value</th>
+                            <th className="p-2 text-center">df</th>
+                            <th className="p-2 text-center">Sig. (2-tailed p)</th>
+                            <th className="p-2 text-center">Cohen's d</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800 text-slate-200">
+                          <tr>
+                            <td className="p-2 font-semibold">{activeResult.data.variableName || `${var1} - ${var2}`}</td>
+                            <td className="p-2 text-center font-mono font-bold text-blue-400">{activeResult.data.meanDiff}</td>
+                            <td className="p-2 text-center font-mono font-bold text-blue-400">{activeResult.data.tStat}</td>
+                            <td className="p-2 text-center font-mono">{activeResult.data.df}</td>
+                            <td className={`p-2 text-center font-mono font-bold ${activeResult.data.pValue < 0.05 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {activeResult.data.pValue}
+                            </td>
+                            <td className="p-2 text-center font-mono text-purple-400 font-bold">{activeResult.data.cohensD ?? 'N/A'}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {selectedTest === 'chisquare' && (
+                  <div className="space-y-3">
+                    <p className="text-xs font-bold text-slate-300 font-serif">Chi-Square Test of Independence ({activeResult.data.rowVar} × {activeResult.data.colVar})</p>
+                    <table className="w-full text-xs text-start border-collapse">
+                      <thead>
+                        <tr className="border-b-2 border-slate-700 text-slate-300 font-bold">
+                          <th className="p-2 text-start">Test Statistic</th>
+                          <th className="p-2 text-center">Value</th>
+                          <th className="p-2 text-center">df</th>
+                          <th className="p-2 text-center">Asymptotic Sig. (2-sided p)</th>
+                          <th className="p-2 text-center">Cramér's V</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800 text-slate-200">
+                        <tr>
+                          <td className="p-2 font-semibold">Pearson Chi-Square</td>
+                          <td className="p-2 text-center font-mono font-bold text-blue-400">{activeResult.data.chiSquare?.stat ?? activeResult.data.stat ?? 0}</td>
+                          <td className="p-2 text-center font-mono">{activeResult.data.chiSquare?.df ?? activeResult.data.df ?? 1}</td>
+                          <td className={`p-2 text-center font-mono font-bold ${(activeResult.data.chiSquare?.pValue ?? activeResult.data.pValue ?? 1) < 0.05 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {activeResult.data.chiSquare?.pValue ?? activeResult.data.pValue ?? 1}
+                          </td>
+                          <td className="p-2 text-center font-mono text-purple-400 font-bold">{activeResult.data.chiSquare?.cramersV ?? activeResult.data.cramersV ?? 0}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {(selectedTest === 'pearson' || selectedTest === 'spearman') && (
+                  <div className="space-y-3">
+                    <p className="text-xs font-bold text-slate-300 font-serif">Correlation Matrix ({selectedTest === 'pearson' ? 'Pearson r' : 'Spearman ρ'})</p>
+                    <table className="w-full text-xs text-start border-collapse">
+                      <thead>
+                        <tr className="border-b-2 border-slate-700 text-slate-300 font-bold">
+                          <th className="p-2 text-start">Variable</th>
+                          {(activeResult.data.variables || activeResult.data.matrix?.[0]?.vars || []).map((v: string) => (
+                            <th key={v} className="p-2 text-center">{v}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800 text-slate-200">
+                        {(activeResult.data.matrix || []).map((rowObj: any, idx: number) => (
+                          <tr key={idx}>
+                            <td className="p-2 font-semibold">{rowObj.var || rowObj.variable}</td>
+                            {(rowObj.values || rowObj.correlations || []).map((val: any, cIdx: number) => (
+                              <td key={cIdx} className="p-2 text-center font-mono font-bold text-blue-400">{typeof val === 'number' ? val : val?.r ?? val?.stat ?? val}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>

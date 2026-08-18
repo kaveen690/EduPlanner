@@ -39,9 +39,11 @@ export const TranslatorTool: React.FC<TranslatorToolProps> = ({
 
     setLoading(true);
     setError(null);
+    setTranslation(null);
 
     try {
       const data = await aiService.translateText({
+        text: sourceText,
         sourceText,
         sourceLang,
         targetLang
@@ -58,8 +60,8 @@ export const TranslatorTool: React.FC<TranslatorToolProps> = ({
         data
       });
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'An error occurred while translating. Please try again.');
+      console.error('[Academic Translation UI Error]:', err);
+      setError(err.message || 'An error occurred while translating. Please check Gemini API key configuration.');
     } finally {
       setLoading(false);
     }
@@ -190,11 +192,11 @@ export const TranslatorTool: React.FC<TranslatorToolProps> = ({
               </div>
             ) : translation ? (
               <div>
-                <p>{translation.translatedText}</p>
+                <p>{translation.translatedText || (translation as any).translation}</p>
 
-                {translation.scholarlyNotes && (
+                {(translation.scholarlyNotes || (translation as any).terminologyNote) && (
                   <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700/60 text-xs text-slate-500 dark:text-slate-400 italic">
-                    <span className="font-semibold text-teal-600 dark:text-teal-400">Terminology Note:</span> {translation.scholarlyNotes}
+                    <span className="font-semibold text-teal-600 dark:text-teal-400">Terminology Note:</span> {translation.scholarlyNotes || (translation as any).terminologyNote}
                   </div>
                 )}
               </div>

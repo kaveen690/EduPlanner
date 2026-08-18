@@ -41,7 +41,7 @@ const LOCAL_STORAGE_KEYS = {
 export const DEFAULT_DEMO_USER: UserProfile = {
   id: 'usr_demo_001',
   email: 'kaveen.hussein@edu.ac',
-  name: 'Dr. Kaveen Hussein',
+  name: 'Kaveen Hussein',
   avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
   institution: 'College of Higher Studies & Research',
   academicLevel: 'Assistant Professor & Senior Researcher',
@@ -107,13 +107,105 @@ export const supabaseAuth = {
     return DEFAULT_DEMO_USER;
   },
 
-  async signUpWithEmail(email: string, password: string, name: string): Promise<{ user: UserProfile | null; error: Error | null }> {
+  async saveRegisteredUser(user: UserProfile): Promise<void> {
+    if (supabase && user.id) {
+      try {
+        await supabase.from('users').upsert({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          institution: user.institution || 'College of Academic Studies',
+          academic_level: user.academicLevel || 'Faculty Researcher',
+          avatar_url: user.avatarUrl || '',
+          created_at: user.createdAt || new Date().toISOString()
+        });
+      } catch (e) {
+        console.warn('[Supabase saveRegisteredUser warning]:', e);
+      }
+    }
+
+    const storedUsersRaw = localStorage.getItem('eduplanner_all_registered_users');
+    let userList: UserProfile[] = [];
+    if (storedUsersRaw) {
+      try {
+        userList = JSON.parse(storedUsersRaw);
+      } catch (e) {}
+    }
+
+    const index = userList.findIndex(u => u.id === user.id || u.email === user.email);
+    if (index >= 0) {
+      userList[index] = { ...userList[index], ...user };
+    } else {
+      userList.unshift(user);
+    }
+    localStorage.setItem('eduplanner_all_registered_users', JSON.stringify(userList));
+  },
+
+  async getRegisteredUsers(): Promise<UserProfile[]> {
+    if (supabase) {
+      try {
+        const { data: users, error } = await supabase
+          .from('users')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && users && users.length > 0) {
+          return users.map(u => ({
+            id: u.id,
+            email: u.email,
+            name: u.name || u.email?.split('@')[0] || 'Academic User',
+            avatarUrl: u.avatar_url,
+            institution: u.institution || 'College of Academic Studies',
+            academicLevel: u.academic_level || 'Faculty Researcher',
+            aiCalls: 420,
+            status: 'Active',
+            createdAt: u.created_at || new Date().toISOString()
+          }));
+        }
+      } catch (err) {
+        console.warn('[Supabase getRegisteredUsers warning]:', err);
+      }
+    }
+
+    const storedUsersRaw = localStorage.getItem('eduplanner_all_registered_users');
+    let userList: UserProfile[] = [];
+    if (storedUsersRaw) {
+      try {
+        userList = JSON.parse(storedUsersRaw);
+      } catch (e) {}
+    }
+
+    const current = await this.getSessionUser();
+    if (current && !userList.some(u => u.id === current.id || u.email === current.email)) {
+      userList.unshift(current);
+    }
+    if (userList.length === 0) {
+      userList = [DEFAULT_DEMO_USER];
+    }
+    return userList.map(u => ({
+      ...u,
+      aiCalls: u.aiCalls || 420,
+      status: u.status || 'Active'
+    }));
+  },
+
+  async signUpWithEmail(
+    email: string,
+    password: string,
+    name: string,
+    institution?: string,
+    academicLevel?: string
+  ): Promise<{ user: UserProfile | null; error: Error | null }> {
     if (supabase) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { name }
+          data: {
+            name,
+            institution: institution || 'College of Academic Studies',
+            academic_level: academicLevel || 'Faculty Researcher'
+          }
         }
       });
       if (error) return { user: null, error };
@@ -122,8 +214,13 @@ export const supabaseAuth = {
           id: data.user.id,
           email: data.user.email || email,
           name: name,
+          institution: institution || 'College of Academic Studies',
+          academicLevel: academicLevel || 'Faculty Researcher',
+          aiCalls: 420,
+          status: 'Active',
           createdAt: new Date().toISOString()
         };
+        await this.saveRegisteredUser(profile);
         return { user: profile, error: null };
       }
     }
@@ -133,8 +230,13 @@ export const supabaseAuth = {
       id: 'usr_' + Date.now(),
       email,
       name,
+      institution: institution || 'College of Academic Studies',
+      academicLevel: academicLevel || 'Faculty Researcher',
+      aiCalls: 420,
+      status: 'Active',
       createdAt: new Date().toISOString()
     };
+    await this.saveRegisteredUser(newProfile);
     localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(newProfile));
     return { user: newProfile, error: null };
   },
@@ -148,6 +250,7 @@ export const supabaseAuth = {
       if (error) return { user: null, error };
       if (data.user) {
         const user = await this.getSessionUser();
+        if (user) await this.saveRegisteredUser(user);
         return { user, error: null };
       }
     }
@@ -155,14 +258,20 @@ export const supabaseAuth = {
     // Local storage fallback sign-in
     const existing = await this.getSessionUser();
     if (existing && existing.email === email) {
+      await this.saveRegisteredUser(existing);
       return { user: existing, error: null };
     }
     const newProfile: UserProfile = {
       id: 'usr_' + Date.now(),
       email,
       name: email.split('@')[0] || 'Academic User',
+      institution: 'College of Academic Studies',
+      academicLevel: 'Faculty Researcher',
+      aiCalls: 420,
+      status: 'Active',
       createdAt: new Date().toISOString()
     };
+    await this.saveRegisteredUser(newProfile);
     localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(newProfile));
     return { user: newProfile, error: null };
   },
@@ -186,6 +295,7 @@ export const supabaseAuth = {
       institution: 'College of Higher Studies & Research',
       createdAt: new Date().toISOString()
     };
+    await this.saveRegisteredUser(googleProfile);
     localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(googleProfile));
     return { error: null };
   },
@@ -209,6 +319,7 @@ export const supabaseAuth = {
       institution: 'College of Higher Studies & Research',
       createdAt: new Date().toISOString()
     };
+    await this.saveRegisteredUser(msProfile);
     localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(msProfile));
     return { error: null };
   },
@@ -228,15 +339,7 @@ export const supabaseAuth = {
     const current = await this.getSessionUser() || DEFAULT_DEMO_USER;
     const updated = { ...current, ...profile };
 
-    if (supabase && current.id) {
-      await supabase.from('users').update({
-        name: updated.name,
-        avatar_url: updated.avatarUrl,
-        institution: updated.institution,
-        academic_level: updated.academicLevel
-      }).eq('id', current.id);
-    }
-
+    await this.saveRegisteredUser(updated);
     localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(updated));
     return updated;
   },

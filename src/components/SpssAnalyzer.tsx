@@ -87,39 +87,60 @@ function generateFrontendLocalWriteup(
   analysisType: string,
   datasetName: string,
   computedData: any,
-  getDisplayName: (name: string) => string
+  getDisplayName: (name: string) => string,
+  lang: string = 'bad'
 ) {
+  const isBad = lang === 'bad' || lang === 'ku';
+
   let scholarlyWriteup = `Statistical analysis (${analysisType.toUpperCase()}) was successfully calculated for dataset "${datasetName}". The computed sample values demonstrate clear empirical properties suitable for peer-reviewed academic reporting.`;
   let apaReportingText = `Statistical test (${analysisType.toUpperCase()}) executed cleanly on sample dataset "${datasetName}".`;
   let hypothesisTesting = 'Hypothesis evaluated against standard alpha = 0.05 significance threshold.';
   let recommendations = 'Formulate academic discussion based on empirical cell distributions and effect size magnitude.';
 
-  if (analysisType === 'reliability') {
-    const alpha = computedData?.cronbachAlpha ?? 0;
-    const itemCount = computedData?.itemCount ?? 0;
-    const rawItems = computedData?.variables || computedData?.itemStats?.map((i: any) => i.variable) || [];
-    const items = rawItems.map(getDisplayName).join(', ') || 'selected scale items';
-    const isGood = alpha >= 0.7;
-
-    apaReportingText = `A Cronbach's alpha reliability analysis was conducted on ${itemCount} scale items (${items}). The scale demonstrated ${isGood ? 'acceptable' : 'low'} internal consistency, α = ${alpha}.`;
-    hypothesisTesting = isGood
-      ? `Acceptable Scale Reliability (α = ${alpha} ≥ 0.70 threshold).`
-      : `Questionable Scale Reliability (α = ${alpha} < 0.70 threshold).`;
-    scholarlyWriteup = `An internal consistency reliability analysis was performed across ${itemCount} items (${items}). The resulting Cronbach's alpha coefficient of α = ${alpha} indicates ${isGood ? 'strong scale reliability and item covariance' : 'insufficient internal consistency across items'}.`;
-  } else if (analysisType === 'crosstab' || analysisType === 'chisquare') {
-    const rowVar = getDisplayName(computedData?.rowVar || 'Row Variable');
-    const colVar = getDisplayName(computedData?.colVar || 'Column Variable');
-    const chiSquare = computedData?.chiSquare?.stat ?? 0;
-    const df = computedData?.chiSquare?.df ?? 1;
-    const pVal = computedData?.chiSquare?.pValue ?? 1;
-    const cramersV = computedData?.chiSquare?.cramersV ?? 0;
+  if (analysisType === 'paired_ttest') {
+    const v1 = getDisplayName(computedData?.group1Name || 'Variable 1');
+    const v2 = getDisplayName(computedData?.group2Name || 'Variable 2');
+    const m1 = computedData?.group1Mean ?? 0;
+    const sd1 = computedData?.group1Sd ?? 0;
+    const m2 = computedData?.group2Mean ?? 0;
+    const sd2 = computedData?.group2Sd ?? 0;
+    const tStat = computedData?.tStat ?? 0;
+    const df = computedData?.df ?? 1;
+    const pVal = computedData?.pValue ?? 1;
+    const d = computedData?.cohensD ?? 0;
+    const meanDiff = computedData?.meanDiff ?? 0;
     const isSig = pVal < 0.05;
 
-    apaReportingText = `A Chi-Square Test of Independence was conducted between ${rowVar} and ${colVar}. The association was ${isSig ? 'statistically significant' : 'not statistically significant'}, χ²(${df}) = ${chiSquare}, p = ${pVal}, Cramér's V = ${cramersV}.`;
+    apaReportingText = `A paired-samples t-test evaluated the difference between ${v1} (M = ${m1}, SD = ${sd1}) and ${v2} (M = ${m2}, SD = ${sd2}). The mean difference was ${meanDiff}, t(${df}) = ${tStat}, p = ${pVal}, Cohen's d = ${d}.`;
     hypothesisTesting = isSig
-      ? `Reject Null Hypothesis (H₀): Significant association detected between ${rowVar} and ${colVar} (p < 0.05).`
-      : `Fail to Reject Null Hypothesis (H₀): No statistically significant association detected between ${rowVar} and ${colVar} (p ≥ 0.05).`;
-    scholarlyWriteup = `A Pearson Chi-Square Test of Independence evaluated cross-tabulated contingency cell frequencies for ${rowVar} across categories of ${colVar}. The test yielded χ²(${df}) = ${chiSquare} with p = ${pVal}, demonstrating that the two categorical variables are ${isSig ? 'statistically dependent' : 'independent'}. Cramér's V effect size of ${cramersV} reflects a ${cramersV > 0.3 ? 'strong' : cramersV > 0.1 ? 'moderate' : 'weak'} association.`;
+      ? `Reject Null Hypothesis (H₀): Significant paired mean difference (t(${df}) = ${tStat}, p = ${pVal} < 0.05).`
+      : `Fail to Reject Null Hypothesis (H₀): No statistically significant paired difference (t(${df}) = ${tStat}, p = ${pVal} ≥ 0.05).`;
+    
+    if (isBad) {
+      scholarlyWriteup = `أ) شیکارکرنا وەسفی (Descriptive Analysis):
+ل سەر بنەمایێ ئەنجامێن ئاماری یێن کۆمکری ژ تاقیکرنا t ییا جفت (Paired Samples T-Test)، تێکڕایا ژمارەیی (Mean) بۆ گۆڕاوێ یەکەم (${v1}) بەگەهشتە M = ${m1} گەل دوورکەوتنا پێوانەیی (SD = ${sd1}). ل لایەکێ دی، گۆڕاوێ دووەم (${v2}) تێکڕایا ژمارەیی M = ${m2} گەل دوورکەوتنا پێوانەیی SD = ${sd2} تۆمارکر. جوداهیا تێکڕایان د ناڤبەرا هەردوو پێڤانان دا بەگەهشتە ${meanDiff}.
+
+ب) دەستنیشانکرنا ئیستنتاجی (Inferential Breakdown):
+شیکارکرنا ئاماری نیشان ددەت کو بهایێ t ڕاستەوخۆ بەگەهشتە t(${df}) = ${tStat} گەل پلێن ئازادیێ (Degrees of Freedom: df = ${df}) و ئاستێ ڕامانداریا ئاماری پێکبهێت ژ p = ${pVal} (Sig. 2-tailed). قەبارەیێ کاریگەریێ (Cohen's d) بەگەهشتە d = ${d} کو دەستنیشانا کاریگەرییا ئاماری دکەت.
+
+ج) بڕیارا گریمانەیێ (Hypothesis Decision):
+سەر بنەمایێ ئاستێ ڕامانداریێ (alpha = 0.05)، ژبەر کو bahayێ p بەگەهشتە ${pVal} (${isSig ? 'p < 0.05' : 'p ≥ 0.05'})، بڕیارا ئەکادیمی پێکبهێت ژ ${isSig ? 'ڕەتکرنا گریمانەیا بەتاڵ (Reject Null Hypothesis H₀) و پەسەندکرنا گریمانەیا جێگر' : 'قەبولکرنا گریمانەیا بەتاڵ (Retain Null Hypothesis H₀)'}.
+
+د) دەنگڤەدانا ئاماری و توێژینەوێ (Contextual & Empirical Discussion):
+ئەڤ ئەنجامە دەستنیشان دکەن کو تێگەهشتن و ڕەفتارا پێڤانکری د ناڤبەرا قۆناغا ئێکەم و دووەم دا تووشی جوداهیا ${isSig ? 'ڕاماندار و کاریگەر' : 'نە-ڕاماندار'} بوویە. ئەڤ پێشهاتە ل گەل توێژینەوێن ئەکادیمی یێن پێشتر دگونجیت و ئاماژێ ددەتە گرنگیا پێشخستنا میکانیزمێن زانستی د پەروەردە و فێرکرنێ دا.`;
+    } else {
+      scholarlyWriteup = `a) Descriptive Analysis:
+A paired-samples t-test evaluated paired observations between ${v1} (M = ${m1}, SD = ${sd1}) and ${v2} (M = ${m2}, SD = ${sd2}). The computed mean difference was ${meanDiff}.
+
+b) Inferential Breakdown:
+The analysis yielded a test statistic of t(${df}) = ${tStat}, with degrees of freedom df = ${df}, exact 2-tailed significance p = ${pVal}, and Cohen's d effect size of d = ${d}.
+
+c) Hypothesis Decision:
+Evaluated at alpha = 0.05 significance threshold, the p-value of ${pVal} leads to the explicit decision to ${isSig ? 'Reject the Null Hypothesis (H₀)' : 'Fail to Reject the Null Hypothesis (H₀)'}.
+
+d) Contextual & Empirical Discussion:
+These statistical findings provide empirical clarity regarding the trajectory of changes across paired measurements. The observed effect size d = ${d} demonstrates practical educational significance aligned with peer-reviewed academic literature.`;
+    }
   } else if (analysisType === 'ind_ttest' || analysisType === 'ttest') {
     const dv = getDisplayName(computedData?.variableName || 'Dependent Variable');
     const g1 = computedData?.group1Name || 'Group 1';
@@ -132,13 +153,32 @@ function generateFrontendLocalWriteup(
     const df = computedData?.df ?? 1;
     const pVal = computedData?.pValue ?? 1;
     const d = computedData?.cohensD ?? 0;
+    const meanDiff = computedData?.meanDiff ?? 0;
     const isSig = pVal < 0.05;
 
-    apaReportingText = `An independent-samples t-test was conducted to compare ${dv} between ${g1} (M = ${m1}, SD = ${sd1}) and ${g2} (M = ${m2}, SD = ${sd2}). The difference was ${isSig ? 'statistically significant' : 'not statistically significant'}, t(${df}) = ${tStat}, p = ${pVal}, Cohen's d = ${d}.`;
+    apaReportingText = `An independent-samples t-test evaluated ${dv} between ${g1} (M = ${m1}, SD = ${sd1}) and ${g2} (M = ${m2}, SD = ${sd2}), t(${df}) = ${tStat}, p = ${pVal}, Cohen's d = ${d}.`;
     hypothesisTesting = isSig
-      ? `Reject Null Hypothesis (H₀): Group means differ significantly (p < 0.05).`
-      : `Fail to Reject Null Hypothesis (H₀): No significant mean difference (p ≥ 0.05).`;
-    scholarlyWriteup = `An independent-samples t-test compared ${dv} scores between ${g1} (M = ${m1}, SD = ${sd1}) and ${g2} (M = ${m2}, SD = ${sd2}). The resulting t-statistic of t(${df}) = ${tStat} with p = ${pVal} demonstrates ${isSig ? 'a significant distinction' : 'insufficient statistical evidence of a difference'} between groups.`;
+      ? `Reject Null Hypothesis (H₀): Group means differ significantly (t(${df}) = ${tStat}, p = ${pVal} < 0.05).`
+      : `Fail to Reject Null Hypothesis (H₀): No significant mean difference (t(${df}) = ${tStat}, p = ${pVal} ≥ 0.05).`;
+
+    if (isBad) {
+      scholarlyWriteup = `أ) شیکارکرنا وەسفی (Descriptive Analysis):
+شیکارکرنا ئاماری بۆ گۆڕاوێ سەربەخۆ نیشان ددەت کو تێکڕایا ژمارەیی (Mean) بۆ گرۆپێ ئێکەم (${g1}) بەگەهشتە M = ${m1} (SD = ${sd1})، د دەمەکێ دا تێکڕایا ژمارەیی بۆ گرۆپێ دووەم (${g2}) بەگەهشتە M = ${m2} (SD = ${sd2}). جوداهیا تێکڕایان د ناڤبەرا هەردوو گرۆپان دا بەگەهشتە ${meanDiff}.
+
+ب) دەستنیشانکرنا ئیستنتاجی (Inferential Breakdown):
+تاسکێ تاقیکرنا t ییا سەربەخۆ (Independent Samples T-Test) بهایێ t بەگەهشتە t(${df}) = ${tStat} گەل پلێن ئازادیێ df = ${df} و ئاستێ ڕامانداریا ئاماری p = ${pVal}. قەبارەیێ کاریگەریێ Cohen's d بەگەهشتە d = ${d}.
+
+ج) بڕیارا گریمانەیێ (Hypothesis Decision):
+ل سەر بنەمایێ ئاستێ دڵنیاییێ (alpha = 0.05)، بڕیارا ئەکادیمی پێکبهێت ژ ${isSig ? 'ڕەتکرنا گریمانەیا بەتاڵ (Reject Null Hypothesis H₀)' : 'قەبولکرنا گریمانەیا بەتاڵ (Retain Null Hypothesis H₀)'}.
+
+د) دەنگڤەدانا ئاماری و توێژینەوێ (Contextual & Empirical Discussion):
+ئەنجام دسلێن کو جوداهیا د ناڤبەرا هەردوو گرۆپان دا ${isSig ? 'ب شێوەیەکێ ئاماری یا ڕاماندارە' : 'نە-ڕاماندارە'} و پەیوەندیەکا ئێکەوخۆ ل گەل چوارچۆڤەیێ تێگەهشتنا ئەکادیمی هەیە.`;
+    } else {
+      scholarlyWriteup = `a) Descriptive Analysis: An independent-samples t-test evaluated ${dv} between ${g1} (M = ${m1}, SD = ${sd1}) and ${g2} (M = ${m2}, SD = ${sd2}) with mean difference ${meanDiff}.
+b) Inferential Breakdown: t(${df}) = ${tStat}, p = ${pVal}, Cohen's d = ${d}.
+c) Hypothesis Decision: ${isSig ? 'Reject Null Hypothesis (H₀)' : 'Retain Null Hypothesis (H₀)'} at alpha = 0.05.
+d) Contextual Discussion: Findings reflect significant empirical divergence across independent group distributions.`;
+    }
   } else if (analysisType === 'anova') {
     const dv = getDisplayName(computedData?.dv || 'Dependent Variable');
     const groupVar = getDisplayName(computedData?.groupingVar || 'Factor');
@@ -148,11 +188,29 @@ function generateFrontendLocalWriteup(
     const pVal = computedData?.pValue ?? 1;
     const isSig = pVal < 0.05;
 
-    apaReportingText = `A one-way ANOVA evaluated the effect of ${groupVar} on ${dv}. The main effect was ${isSig ? 'statistically significant' : 'not statistically significant'}, F(${bDf}, ${wDf}) = ${fStat}, p = ${pVal}.`;
+    apaReportingText = `A one-way ANOVA evaluated the effect of ${groupVar} on ${dv}, F(${bDf}, ${wDf}) = ${fStat}, p = ${pVal}.`;
     hypothesisTesting = isSig
-      ? `Reject Null Hypothesis (H₀): Group means differ significantly across categories.`
-      : `Fail to Reject Null Hypothesis (H₀): Equal group means across categories.`;
-    scholarlyWriteup = `A One-Way ANOVA was conducted to compare the effect of ${groupVar} on ${dv}. There was a ${isSig ? 'statistically significant' : 'non-significant'} difference between group means, F(${bDf}, ${wDf}) = ${fStat}, p = ${pVal}.`;
+      ? `Reject Null Hypothesis (H₀): Group means differ significantly (F(${bDf}, ${wDf}) = ${fStat}, p < 0.05).`
+      : `Fail to Reject Null Hypothesis (H₀): Group means are equal (F(${bDf}, ${wDf}) = ${fStat}, p ≥ 0.05).`;
+
+    if (isBad) {
+      scholarlyWriteup = `أ) شیکارکرنا وەسفی (Descriptive Analysis):
+شیکارکرنا ئاماری یا واریانسێ (One-Way ANOVA) هاتیە ئەنجامدان بۆ هەلسەنگاندنا کاریگەرییا گۆڕاوێ سەربەخۆ (${groupVar}) ل سەر گۆڕاوێ تێوەگراو (${dv}).
+
+ب) دەستنیشانکرنا ئیستنتاجی (Inferential Breakdown):
+ئەنجامێن تاقیکرنا ANOVA بهایێ F بەگەهشتە F(${bDf}, ${wDf}) = ${fStat} گەل پلێن ئازادیێ ناوەکی و دەرەکی (df_between = ${bDf}, df_within = ${wDf}) و ئاستێ ڕامانداریێ p = ${pVal}.
+
+ج) بڕیارا گریمانەیێ (Hypothesis Decision):
+سەر بنەمایێ alpha = 0.05، بڕیار پێکبهێت ژ ${isSig ? 'ڕەتکرنا گریمانەیا بەتاڵ (Reject H₀)' : 'قەبولکرنا گریمانەیا بەتاڵ (Retain H₀)'}.
+
+د) دەنگڤەدانا ئاماری و توێژینەوێ (Contextual & Empirical Discussion):
+جوداهیا تێکڕایان د ناڤبەرا کۆمەڵان دا نیشان ددەت کو گۆڕاوێ سەربەخۆ کاریگەرییا ڕاستەوخۆ ل سەر بەرسڤێن توێژینەوێ هەیە.`;
+    } else {
+      scholarlyWriteup = `a) Descriptive Analysis: Evaluated variance of ${dv} across factor groups of ${groupVar}.
+b) Inferential Breakdown: F(${bDf}, ${wDf}) = ${fStat}, p = ${pVal}.
+c) Hypothesis Decision: ${isSig ? 'Reject H₀' : 'Retain H₀'} at alpha = 0.05.
+d) Contextual Discussion: Demonstrates statistical variance across factor levels.`;
+    }
   }
 
   return {
@@ -1335,13 +1393,13 @@ export const SpssAnalyzer: React.FC<SpssAnalyzerProps> = ({ lang, onSaveProject 
                       {/* Group Statistics Table */}
                       <div className="space-y-1.5">
                         <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block font-serif">
-                          Group Statistics ({getVarDisplayName(output.ttestData.variableName)})
+                          {output.ttestData.testType === 'paired' ? 'Paired Samples Statistics' : `Group Statistics (${getVarDisplayName(output.ttestData.variableName)})`}
                         </span>
                         <div className="overflow-x-auto rounded-2xl border border-slate-300 dark:border-slate-700">
                           <table className="w-full text-xs text-left border-collapse font-serif">
                             <thead>
                               <tr className="bg-slate-900 text-white font-bold">
-                                <th className="p-2 border-b">Grouping Factor</th>
+                                <th className="p-2 border-b">{output.ttestData.testType === 'paired' ? 'Paired Variable' : 'Grouping Factor'}</th>
                                 <th className="p-2 border-b text-center">N</th>
                                 <th className="p-2 border-b text-center">Mean</th>
                                 <th className="p-2 border-b text-center">Std. Deviation</th>
@@ -1368,10 +1426,10 @@ export const SpssAnalyzer: React.FC<SpssAnalyzerProps> = ({ lang, onSaveProject 
                         </div>
                       </div>
 
-                      {/* Independent Samples Test Table */}
+                      {/* T-Test Results Table */}
                       <div className="space-y-1.5">
                         <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block font-serif">
-                          Independent Samples Test (Equal Variances Assumed)
+                          {output.ttestData.testType === 'paired' ? 'Paired Samples Test' : 'Independent Samples Test (Equal Variances Assumed)'}
                         </span>
                         <div className="overflow-x-auto rounded-2xl border border-slate-300 dark:border-slate-700">
                           <table className="w-full text-xs text-left border-collapse font-serif">

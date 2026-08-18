@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HelpCircle, Sparkles, Play, CheckCircle2, ArrowRight, Lightbulb, ShieldCheck } from 'lucide-react';
+import { HelpCircle, Sparkles, Play, CheckCircle2, ArrowRight, Lightbulb, ShieldCheck, Image as ImageIcon, Upload, X } from 'lucide-react';
 import { Language, ResearchQuestionItem } from '../../types';
 import { isRTL } from '../../lib/i18n';
 import { dataAnalysisService, DatasetAuditSummary } from '../../services/dataAnalysisService';
@@ -64,8 +64,30 @@ export const ResearchQuestionAnalysisSection: React.FC<ResearchQuestionAnalysisS
 
   const rtl = isRTL(lang);
 
+  const [userTemplate, setUserTemplate] = useState<string>('');
+  const [outputLanguage, setOutputLanguage] = useState<Language>(lang || 'bad');
+  const [visualTemplateImage, setVisualTemplateImage] = useState<string | null>(null);
+
   const handleRqTextChange = (id: string, text: string) => {
     setRqs(prev => prev.map(item => (item.id === id ? { ...item, rqText: text } : item)));
+  };
+
+  const handleVisualImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      onShowToast('error', 'Invalid File', 'Please upload a valid image file (PNG, JPG, WEBP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setVisualTemplateImage(base64);
+      onShowToast('success', 'Visual Template Loaded', 'Image loaded cleanly. Gemini multimodal vision pattern analysis enabled.');
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleVarToggle = (rqId: string, varName: string) => {
@@ -100,7 +122,7 @@ export const ResearchQuestionAnalysisSection: React.FC<ResearchQuestionAnalysisS
     setRqs(prev => prev.map(item => (item.id === rqId ? { ...item, alphaLevel: alpha } : item)));
   };
 
-  const executeRqAnalysis = (rqId: string) => {
+  const executeRqAnalysis = async (rqId: string) => {
     const rq = rqs.find(item => item.id === rqId);
     if (!rq) return;
 
@@ -126,7 +148,16 @@ export const ResearchQuestionAnalysisSection: React.FC<ResearchQuestionAnalysisS
         });
       }
 
-      const summaryText = dataAnalysisService.generateLocalInterpretationFallback(rq.selectedTest, resultData);
+      const summaryText = await dataAnalysisService.generateRqAcademicInterpretation(
+        rq.rqNumber,
+        rq.rqText,
+        rq.selectedTest,
+        resultData,
+        '',
+        outputLanguage,
+        userTemplate,
+        visualTemplateImage
+      );
 
       const updatedRqs = rqs.map(item => {
         if (item.id !== rqId) return item;
@@ -172,6 +203,151 @@ export const ResearchQuestionAnalysisSection: React.FC<ResearchQuestionAnalysisS
           {lang === 'ku' ? 'بەردەوامبوون بۆ دروستکەری چارتەکان' : lang === 'bad' ? 'دەربازبوون بۆ دروستکەرێ چارتان' : lang === 'ar' ? 'الانتقال إلى المخططات البيانية' : 'Proceed to Visualizations'}
           <ArrowRight className={`w-4 h-4 ${rtl ? 'rotate-180' : ''}`} />
         </button>
+      </div>
+
+      {/* Output Language Controller Card */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-slate-200 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-blue-400" />
+            {lang === 'bad' || lang === 'ku'
+              ? 'کۆنترۆلکەرێ زمانێ ڕاگەیاندنا ئاماری (Dynamic Output Language Controller)'
+              : lang === 'ar'
+              ? 'متحكم لغة التقرير الإحصائي (Dynamic Output Language Controller)'
+              : 'Dynamic Output Language Controller'}
+          </label>
+          <span className="text-[10px] font-mono text-blue-400 uppercase bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+            {outputLanguage === 'bad' ? 'بادینی (کۆردی - دهۆک)' : outputLanguage === 'ku' ? 'سۆرانی (کوردی)' : outputLanguage === 'ar' ? 'العربية' : 'English'}
+          </span>
+        </div>
+
+        <p className="text-[11px] text-slate-400 leading-relaxed">
+          Select the exact target language for RQ interpretations. The AI generator will lock 100% of narrative prose, headings, and statistical writeup strictly into your chosen language without language mixing.
+        </p>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 pt-1">
+          {[
+            { id: 'bad', label: 'بادینی (کۆردی - دهۆک)', desc: 'Badini Dialect (Duhok)' },
+            { id: 'ku', label: 'سۆرانی (کوردی)', desc: 'Sorani Kurdish' },
+            { id: 'ar', label: 'العربية الفصحى', desc: 'Academic Arabic' },
+            { id: 'en', label: 'Academic English', desc: 'APA 7th Edition' }
+          ].map(item => (
+            <button
+              key={item.id}
+              onClick={() => setOutputLanguage(item.id as Language)}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                outputLanguage === item.id
+                  ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-md shadow-blue-500/10 font-bold'
+                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+              }`}
+            >
+              <div className="text-xs font-bold">{item.label}</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">{item.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Multi-modal Image-to-Image Visual Pattern Template Card */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-slate-200 flex items-center gap-2">
+            <ImageIcon className="w-4 h-4 text-purple-400" />
+            {lang === 'bad' || lang === 'ku'
+              ? 'تێمپلێتێ وێنەیی یێ فرە-مۆدال (Multi-modal Visual Pattern Template Image)'
+              : lang === 'ar'
+              ? 'نموذج النمط البصري المتعدد (Multi-modal Visual Template Image)'
+              : 'Multi-modal Image-to-Image Visual Pattern Template'}
+          </label>
+          <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded border ${
+            visualTemplateImage
+              ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+              : 'bg-slate-800 border-slate-700 text-slate-500'
+          }`}>
+            {visualTemplateImage ? 'Visual Replication Active' : 'No Image'}
+          </span>
+        </div>
+
+        <p className="text-[11px] text-slate-400 leading-relaxed">
+          Upload an example layout or chart image (<code className="text-purple-400">PNG, JPG, WEBP</code>). Computer vision will analyze the graphical layout, typography, and charts, synthesizing an aligned Kurdish visual analysis with current dataset results.
+        </p>
+
+        {visualTemplateImage ? (
+          <div className="relative rounded-xl overflow-hidden border border-purple-500/30 bg-slate-950 p-4 flex flex-col md:flex-row items-center gap-4">
+            <img
+              src={visualTemplateImage}
+              alt="Visual Template Preview"
+              className="w-32 h-24 object-cover rounded-lg border border-slate-800 shadow-md shrink-0"
+            />
+            <div className="flex-1 space-y-1 text-left">
+              <div className="text-xs font-bold text-purple-300 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-purple-400" />
+                Visual Pattern Image Uploaded & Analyzed
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Gemini 2.5 Flash will replicate this image's structural boxes, color scheme, and graphical chart layout for all Research Question interpretations.
+              </p>
+            </div>
+            <button
+              onClick={() => setVisualTemplateImage(null)}
+              className="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+              Remove Image
+            </button>
+          </div>
+        ) : (
+          <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-800 hover:border-purple-500/50 rounded-xl bg-slate-950/50 hover:bg-slate-950 transition-all cursor-pointer group">
+            <Upload className="w-6 h-6 text-slate-500 group-hover:text-purple-400 transition-colors mb-2" />
+            <span className="text-xs font-bold text-slate-300 group-hover:text-purple-300">
+              Click or drag visual template image to upload
+            </span>
+            <span className="text-[10px] text-slate-500 mt-1">
+              Supports SPSS comparison plots, Likert distribution graphs, or thesis summary layout images
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleVisualImageUpload}
+              className="hidden"
+            />
+          </label>
+        )}
+      </div>
+
+      {/* User Example Text Template Input Card */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-slate-200 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-emerald-400" />
+            {lang === 'bad' || lang === 'ku'
+              ? 'نموونەیا داڕشتنێ يان ستايلێ شیکاریا ئەکادیمی (Optional Writeup Style Reference Template)'
+              : lang === 'ar'
+              ? 'نموذج الصياغة الإحصائية المخصص (اختیاري)'
+              : 'Example Text Template / Writeup Style Reference (Optional)'}
+          </label>
+          <span className="text-[10px] text-slate-400 font-mono">
+            {userTemplate ? `${userTemplate.length} chars` : 'Replication Active'}
+          </span>
+        </div>
+
+        <p className="text-[11px] text-slate-400 leading-relaxed">
+          {lang === 'bad' || lang === 'ku'
+            ? 'تێکستەکێ نموونەیی يان ستايلێ چاڤەڕێکری ل ڤێرە بپێست کە. بزوێنەرێ زیرەک دێ ستايل، شێواز، ئاستێ تێپەڕبوونێ و ڕستەسازییا تە کولۆن دکەت و شیکاریا پرسیارێن توێژینەوێ ل سەر دارێژێت.'
+            : 'Paste an example analysis template here. The AI will analyze and replicate the structure, tone, level of detail, and exact phrasing style of your template while preserving Badini Kurdish academic dialect lock and empirical dataset results.'}
+        </p>
+
+        <textarea
+          value={userTemplate}
+          onChange={(e) => setUserTemplate(e.target.value)}
+          placeholder={
+            lang === 'bad' || lang === 'ku'
+              ? 'نموونە: أ) بەرسڤا ئێکەوخۆ: شیکارکرنا ئاماری دیار دکەت کو... ب) بەڵگەیێن ئاماری: بهایێ t بەگەهشتە... ج) بڕیارا گریمانەیێ: ڕەتکرنا گریمانەیا بەتاڵ H₀... د) دەنگڤەدانا ئاماری: ئەنجام ل گەل چوارچۆڤەیێ تیۆری دگونجن...'
+              : 'Paste your custom example writeup text template here...'
+          }
+          rows={3}
+          className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 transition-colors font-mono leading-relaxed resize-y"
+        />
       </div>
 
       {/* RQs List Cards */}

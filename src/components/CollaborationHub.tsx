@@ -29,9 +29,7 @@ const SAMPLE_TEAM_WORKSPACE: TeamWorkspace = {
   name: 'Academic Research Consortium',
   ownerId: 'usr_demo_001',
   members: [
-    { userId: 'usr_demo_001', name: 'Dr. Kaveen Hussein', email: 'kaveen.hussein@edu.ac', role: 'Admin' },
-    { userId: 'usr_demo_002', name: 'Prof. Alexander Smith', email: 'a.smith@edu.ac', role: 'Editor' },
-    { userId: 'usr_demo_003', name: 'Dr. Miriam Al-Hassan', email: 'm.alhassan@edu.ac', role: 'Viewer' }
+    { userId: 'usr_demo_001', name: 'Kaveen Hussein', email: 'kaveen.hussein@edu.ac', role: 'Admin' }
   ],
   projectsCount: 8,
   createdAt: new Date().toISOString()
@@ -41,17 +39,17 @@ const SAMPLE_COMMENTS: ProjectComment[] = [
   {
     id: 'c1',
     projectId: 'p1',
-    authorId: 'usr_demo_002',
-    authorName: 'Prof. Alexander Smith',
-    content: 'Chapter 3 methodology sample size N=185 looks strong. Let us double check the SPSS Cronbach alpha reliability output.',
+    authorId: 'usr_demo_001',
+    authorName: 'Kaveen Hussein',
+    content: 'Chapter 3 methodology sample size N=185 looks strong. SPSS Cronbach alpha reliability output verified.',
     createdAt: new Date(Date.now() - 3600000).toISOString()
   },
   {
     id: 'c2',
     projectId: 'p1',
     authorId: 'usr_demo_001',
-    authorName: 'Dr. Kaveen Hussein',
-    content: 'Agreed! I expanded Section 4 with SPSS regression Beta coefficients and localized regional context.',
+    authorName: 'Kaveen Hussein',
+    content: 'Expanded Section 4 with SPSS regression Beta coefficients and localized regional context.',
     createdAt: new Date(Date.now() - 1800000).toISOString()
   }
 ];
@@ -61,7 +59,7 @@ const SAMPLE_VERSIONS: ProjectVersionHistory[] = [
     id: 'v2',
     projectId: 'p1',
     versionName: 'Version 2.0 (Doctoral Deep-Dive)',
-    updatedBy: 'Dr. Kaveen Hussein',
+    updatedBy: 'Kaveen Hussein',
     timestamp: new Date(Date.now() - 1800000).toISOString(),
     changesSummary: 'Expanded Section 4 with SPSS regression tables and added localized regional framework analysis.',
     snapshotData: {}
@@ -70,7 +68,7 @@ const SAMPLE_VERSIONS: ProjectVersionHistory[] = [
     id: 'v1',
     projectId: 'p1',
     versionName: 'Version 1.0 (Initial Draft)',
-    updatedBy: 'Prof. Alexander Smith',
+    updatedBy: 'Kaveen Hussein',
     timestamp: new Date(Date.now() - 86400000).toISOString(),
     changesSummary: 'Initial research paper formulation with APA 7th citations.',
     snapshotData: {}

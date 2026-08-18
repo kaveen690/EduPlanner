@@ -388,11 +388,20 @@ export const aiService = {
    * Academic Translation Engine
    */
   async translateText(payload: {
-    sourceText: string;
-    sourceLang: string;
-    targetLang: Language;
+    sourceText?: string;
+    inputText?: string;
+    text?: string;
+    sourceLang?: string;
+    sourceLanguage?: string;
+    targetLang?: Language;
+    targetLanguage?: Language;
   }): Promise<TranslationOutput> {
-    const result = await postJSON<TranslationOutput>('/api/translate', payload);
+    const requestBody = {
+      sourceText: payload.sourceText || payload.inputText || payload.text || '',
+      sourceLang: payload.sourceLang || payload.sourceLanguage || 'auto',
+      targetLang: payload.targetLang || payload.targetLanguage || 'en'
+    };
+    const result = await postJSON<TranslationOutput>('/api/translate', requestBody);
     return {
       ...result,
       id: result.id || `trans_${Date.now()}`,
@@ -525,6 +534,8 @@ export const aiService = {
     messages?: any[];
     file?: string | null;
     uploadedFile?: { name: string } | null;
+    image?: string | null;
+    visualTemplateImage?: string | null;
     language?: Language;
     model?: string;
   }): Promise<{ reply: string; success?: boolean; error?: string }> {

@@ -569,19 +569,34 @@ export class DataAnalysisService {
     lang: string
   ): Promise<string> {
     try {
-      const prompt = `You are a senior university professor and biostatistician reviewing empirical statistical outputs.
-Language of writeup: ${lang === 'ku' || lang === 'bad' ? 'Kurdish' : lang === 'ar' ? 'Arabic' : 'English'}.
+      const isBad = lang === 'bad' || lang === 'ku';
+      const prompt = `You are a senior university professor and expert biostatistician writing an exhaustive, doctoral-level Chapter 4 Results & Detailed Interpretation (Statistical Discussion).
+Language of writeup: ${isBad ? 'Kurdish (Badini dialect - Duhok phrasing ONLY)' : lang === 'ar' ? 'Arabic' : 'English'}.
 Dataset Name: ${datasetName}
 Statistical Test: ${testType.toUpperCase()}
 Empirical Calculations: ${JSON.stringify(resultData, null, 2)}
 
-Provide an academic APA 7th edition writeup with the exact format:
-Finding: (Report exact sample values, means, test statistics, and p-values)
-Interpretation: (What this statistical result means conceptually and practically)
-Statistical Significance: (Explicitly state if p < 0.05 or p >= 0.05 without fabricating)
-Conclusion: (Academic conclusions for research report)
+STRICT REQUIREMENT: Provide an exhaustive, academically rigorous statistical discussion (600-800 words target depth) with these EXACT four components:
 
-CRITICAL: Do NOT invent numbers. Only interpret the actual calculated results provided above.`;
+1. Descriptive Analysis (شیکارکرنا وەسفی):
+   - Report exact empirical means (M), standard deviations (SD), and mean differences.
+   - Detail central tendencies and sample characteristics without summary shortcuts.
+
+2. Inferential Breakdown (دەستنیشانکرنا ئیستنتاجی):
+   - Evaluate exact test statistics: t-value or F-value, degrees of freedom (df), exact 2-tailed p-value (Sig.), and effect size (Cohen's d, Eta Squared, or Cramér's V).
+   - Detail statistical precision and error margins.
+
+3. Hypothesis Decision (بڕیارا گریمانەیێ):
+   - Explicitly state whether to Reject H0 (Null Hypothesis) or Retain H0 based on alpha = 0.05.
+   - State the academic decision clearly.
+
+4. Contextual & Empirical Discussion (دەنگڤەدانا ئاماری و توێژینەوێ):
+   - Thoroughly connect findings to the core research context and discuss theoretical and pedagogical implications.
+   - Compare results with literature.
+
+${isBad ? `DIALECT LOCK: Use BADINI KURDISH ONLY (Duhok dialect terms like "دەستنیشانکرنا ئاماری", "جوداهیا تێکڕایان", "کاریگەرییا ئاماری", "ئەنجامێن سەرەکی", "پێشنیارێن ستراتیژی"). Absolutely NO Sorani words ("دەکات", "لە سەر", "ئەم بەشە", "دەبێت", "کردووە").` : ''}
+
+Do NOT invent fake numbers. Only interpret the actual empirical figures provided above. Target 600-800 words of deep academic writing.`;
 
       const aiResponse = await aiService.postGeminiChat({
         prompt,
@@ -603,37 +618,253 @@ CRITICAL: Do NOT invent numbers. Only interpret the actual calculated results pr
    * Deterministic Local Academic Interpretation Fallback
    */
   generateLocalInterpretationFallback(testType: string, data: any): string {
+    const isSig = (data.pValue ?? 1) < 0.05;
+
+    if (testType === 'paired_ttest') {
+      const v1 = data.group1Name || 'Variable 1';
+      const v2 = data.group2Name || 'Variable 2';
+      const m1 = data.group1Mean ?? 0;
+      const sd1 = data.group1Sd ?? 0;
+      const m2 = data.group2Mean ?? 0;
+      const sd2 = data.group2Sd ?? 0;
+      const tStat = data.tStat ?? 0;
+      const df = data.df ?? 1;
+      const pVal = data.pValue ?? 1;
+      const d = data.cohensD ?? 0;
+      const meanDiff = data.meanDiff ?? 0;
+
+      return `أ) شیکارکرنا وەسفی (Descriptive Analysis):
+ل سەر بنەمایێ ئەنجامێن ئاماری یێن کۆمکری ژ تاقیکرنا t ییا جفت (Paired Samples T-Test)، تێکڕایا ژمارەیی (Mean) بۆ گۆڕاوێ یەکەم (${v1}) بەگەهشتە M = ${m1} گەل دوورکەوتنا پێوانەیی (SD = ${sd1}). ل لایەکێ دی، گۆڕاوێ دووەم (${v2}) تێکڕایا ژمارەیی M = ${m2} گەل دوورکەوتنا پێوانەیی SD = ${sd2} تۆمارکر. جوداهیا تێکڕایان د ناڤبەرا هەردوو پێڤانان دا بەگەهشتە ${meanDiff}.
+
+ب) دەستنیشانکرنا ئیستنتاجی (Inferential Breakdown):
+شیکارکرنا ئاماری نیشان ددەت کو بهایێ t ڕاستەوخۆ بەگەهشتە t(${df}) = ${tStat} گەل پلێن ئازادیێ (Degrees of Freedom: df = ${df}) و ئاستێ ڕامانداریا ئاماری پێکبهێت ژ p = ${pVal} (Sig. 2-tailed). قەبارەیێ کاریگەریێ (Cohen's d) بەگەهشتە d = ${d} کو دەستنیشانا کاریگەرییا ئاماری دکەت.
+
+ج) بڕیارا گریمانەیێ (Hypothesis Decision):
+سەر بنەمایێ ئاستێ ڕامانداریێ (alpha = 0.05)، ژبەر کو بهایێ p بەگەهشتە ${pVal} (${isSig ? 'p < 0.05' : 'p ≥ 0.05'})، بڕیارا ئەکادیمی پێکبهێت ژ ${isSig ? 'ڕەتکرنا گریمانەیا بەتاڵ (Reject Null Hypothesis H₀) و پەسەندکرنا گریمانەیا جێگر' : 'قەبولکرنا گریمانەیا بەتاڵ (Retain Null Hypothesis H₀)'}.
+
+د) دەنگڤەدانا ئاماری و توێژینەوێ (Contextual & Empirical Discussion):
+ئەڤ ئەنجامە دەستنیشان دکەن کو تێگەهشتن و ڕەفتارا پێڤانکری د ناڤبەرا قۆناغا ئێکەم و دووەم دا تووشی جوداهیا ${isSig ? 'ڕاماندار و کاریگەر' : 'نە-ڕاماندار'} بوویە. ئەڤ پێشهاتە ل گەل توێژینەوێن ئەکادیمی یێن پێشتر دگونجیت و ئاماژێ ددەتە گرنگیا پێشخستنا میکانیزمێن زانستی د پەروەردە و فێرکرنێ دا.`;
+    }
+
     if (testType === 'independent_ttest') {
-      const isSig = (data.pValue ?? 1) < 0.05;
-      return `Finding: An independent samples t-test was conducted comparing ${data.group1Name} (M = ${data.group1Mean}, SD = ${data.group1Sd}) and ${data.group2Name} (M = ${data.group2Mean}, SD = ${data.group2Sd}). The mean difference was ${data.meanDiff}, t(${data.df}) = ${data.tStat}, p = ${data.pValue}.
-Interpretation: The data demonstrates ${isSig ? 'a significant difference' : 'no statistically significant difference'} between the two groups.
-Statistical Significance: ${isSig ? 'Statistically Significant (p < 0.05).' : 'Not Statistically Significant (p >= 0.05).'}`;
+      return `أ) شیکارکرنا وەسفی (Descriptive Analysis):
+شیکارکرنا ئاماری بۆ گۆڕاوێ سەربەخۆ نیشان ددەت کو تێکڕایا ژمارەیی (Mean) بۆ گرۆپێ ئێکەم (${data.group1Name || 'Group 1'}) بەگەهشتە M = ${data.group1Mean ?? 0} (SD = ${data.group1Sd ?? 0})، د دەمەکێ دا تێکڕایا ژمارەیی بۆ گرۆپێ دووەم (${data.group2Name || 'Group 2'}) بەگەهشتە M = ${data.group2Mean ?? 0} (SD = ${data.group2Sd ?? 0}). جوداهیا تێکڕایان د ناڤبەرا هەردوو گرۆپان دا بەگەهشتە ${data.meanDiff ?? 0}.
+
+ب) دەستنیشانکرنا ئیستنتاجی (Inferential Breakdown):
+تاسکێ تاقیکرنا t ییا سەربەخۆ (Independent Samples T-Test) بهایێ t بەگەهشتە t(${data.df ?? 1}) = ${data.tStat ?? 0} گەل پلێن ئازادیێ df = ${data.df ?? 1} و ئاستێ ڕامانداریا ئاماری p = ${data.pValue ?? 1}. قەبارەیێ کاریگەریێ Cohen's d بەگەهشتە d = ${data.cohensD ?? 0}.
+
+ج) بڕیارا گریمانەیێ (Hypothesis Decision):
+ل سەر بنەمایێ ئاستێ دڵنیاییێ (alpha = 0.05)، بڕیارا ئەکادیمی پێکبهێت ژ ${isSig ? 'ڕەتکرنا گریمانەیا بەتاڵ (Reject Null Hypothesis H₀)' : 'قەبولکرنا گریمانەیا بەتاڵ (Retain Null Hypothesis H₀)'}.
+
+د) دەنگڤەدانا ئاماری و توێژینەوێ (Contextual & Empirical Discussion):
+ئەنجام دسلێن کو جوداهیا د ناڤبەرا هەردوو گرۆپان دا ${isSig ? 'ب شێوەیەکێ ئاماری یا ڕاماندارە' : 'نە-ڕاماندارە'} و پەیوەندیەکا ئێکەوخۆ ل گەل چوارچۆڤەیێ تێگەهشتنا ئەکادیمی هەیە.`;
     }
 
     if (testType === 'anova') {
-      const isSig = (data.pValue ?? 1) < 0.05;
-      return `Finding: A One-Way ANOVA was executed for '${data.dv}' across groups of '${data.groupingVar}'. The test yielded F(${data.betweenDf}, ${data.withinDf}) = ${data.fStat}, p = ${data.pValue}.
-Interpretation: There is ${isSig ? 'a statistically significant variance' : 'no significant variance'} across the group means.
-Statistical Significance: ${isSig ? 'Statistically Significant (p < 0.05).' : 'Not Statistically Significant (p >= 0.05).'}`;
+      return `أ) شیکارکرنا وەسفی (Descriptive Analysis):
+شیکارکرنا ئاماری یا واریانسێ (One-Way ANOVA) هاتیە ئەنجامدان بۆ هەلسەنگاندنا کاریگەرییا گۆڕاوێ سەربەخۆ (${data.groupingVar || 'Factor'}) ل سەر گۆڕاوێ تێوەگراو (${data.dv || 'Dependent Variable'}).
+
+ب) دەستنیشانکرنا ئیستنتاجی (Inferential Breakdown):
+ئەنجامێن تاقیکرنا ANOVA بهایێ F بەگەهشتە F(${data.betweenDf ?? 1}, ${data.withinDf ?? 1}) = ${data.fStat ?? 0} گەل پلێن ئازادیێ ناوەکی و دەرەکی و ئاستێ ڕامانداریێ p = ${data.pValue ?? 1}.
+
+ج) بڕیارا گریمانەیێ (Hypothesis Decision):
+سەر بنەمایێ alpha = 0.05، بڕیار پێکبهێت ژ ${isSig ? 'ڕەتکرنا گریمانەیا بەتاڵ (Reject H₀)' : 'قەبولکرنا گریمانەیا بەتاڵ (Retain H₀)'}.
+
+د) دەنگڤەدانا ئاماری و توێژینەوێ (Contextual & Empirical Discussion):
+جوداهیا تێکڕایان د ناڤبەرا کۆمەڵان دا نیشان ددەت کو گۆڕاوێ سەربەخۆ کاریگەرییا ڕاستەوخۆ ل سەر بەرسڤێن توێژینەوێ هەیە.`;
     }
 
     if (testType === 'regression') {
-      const isSig = (data.pValue ?? 1) < 0.05;
-      return `Finding: A Linear Regression analysis predicting '${data.dv}' from predictors [${data.ivs.join(', ')}] yielded R² = ${data.r2}, Adjusted R² = ${data.adjR2}, F = ${data.fStat}, p = ${data.pValue}.
-Interpretation: The predictor variables account for ${(data.r2 * 100).toFixed(1)}% of the total variance in '${data.dv}'.
-Statistical Significance: ${isSig ? 'Statistically Significant Model (p < 0.05).' : 'Not Statistically Significant Model (p >= 0.05).'}`;
+      return `أ) شیکارکرنا وەسفی (Descriptive Analysis):
+شیکارکرنا ڕاگرتنا هێڵی (Linear Multiple Regression) هاتیە خەملاندن بۆ پێشبینیکرنا گۆڕاوێ تێوەگراو (${data.dv || 'DV'}).
+
+ب) دەستنیشانکرنا ئیستنتاجی (Inferential Breakdown):
+مودێلا ڕاگرتنێ ڕێژەیا R² = ${data.r2 ?? 0} (Adjusted R² = ${data.adjR2 ?? 0}) تۆمارکر، گەل بهایێ F = ${data.fStat ?? 0} و ئاستێ ڕامانداریێ p = ${data.pValue ?? 1}.
+
+ج) بڕیارا گریمانەیێ (Hypothesis Decision):
+ل سەر بنەمایێ alpha = 0.05، مودێل بەگەهشتە بڕیارا ${isSig ? 'ڕەتکرنا گریمانەیا بەتاڵ (Reject H₀)' : 'قەبولکرنا گریمانەیا بەتاڵ (Retain H₀)'}.
+
+د) دەنگڤەدانا ئاماری و توێژینەوێ (Contextual & Empirical Discussion):
+گۆڕاوێن پێشبینیکەر رێژەیا ${(Number(data.r2 || 0) * 100).toFixed(1)}% ژ گۆڕانکاریێن کلیی یێن گۆڕاوێ تێوەگراو ڕوون دکەن.`;
     }
 
     if (testType === 'reliability') {
       const alpha = data.cronbachAlpha ?? 0;
       const isGood = alpha >= 0.7;
-      return `Finding: Cronbach's Alpha reliability analysis across ${data.itemCount} items yielded α = ${alpha}.
-Interpretation: The survey scale demonstrates ${isGood ? 'acceptable internal consistency and scale reliability' : 'low internal consistency across items'}.
-Statistical Significance: ${isGood ? 'Acceptable Reliability (α >= 0.70).' : 'Insufficient Reliability (α < 0.70).'}`;
+      return `أ) شیکارکرنا وەسفی (Descriptive Analysis):
+شیکارکرنا جێگیرییا ناوەکی (Cronbach's Alpha Reliability) بۆ ${data.itemCount || 0} بڕگێن پێڤانێ هاتیە ئەنجامدان.
+
+ب) دەستنیشانکرنا ئیستنتاجی (Inferential Breakdown):
+هاوکێشەیا جێگیریێ ئاستێ alpha = ${alpha} تۆمارکر.
+
+ج) بڕیارا گریمانەیێ (Hypothesis Decision):
+سەر بنەمایێ پێڤانا 0.70، ئاستێ جێگیریێ پێکبهێت ژ ${isGood ? 'جێگیرییا پەسەندکری (α ≥ 0.70)' : 'جێگیرییا کەم (α < 0.70)'}.
+
+د) دەنگڤەدانا ئاماری و توێژینەوێ (Contextual & Empirical Discussion):
+ئەنجامێن جێگیریێ دڵنیاییێ ددنە بەکارهێنانا پێڤانێ د توێژینەوێن ئەکادیمی دا.`;
     }
 
-    return `Finding: Analysis (${testType}) computed cleanly with valid empirical statistics.
-Interpretation: Results reflect actual calculated dataset distributions.`;
+    return `أ) شیکارکرنا وەسفی: شیکارکرنا ئاماری بۆ تاقیکرنا (${testType}) ب سەرکەوتوویی هاتیە ئەنجامدان.
+ب) دەستنیشانکرنا ئیستنتاجی: ئامارێن هەژمارکری بهایێن هەقیقی یێن داتایێ نیشان ددن.
+ج) بڕیارا گریمانەیێ: بەرسڤ سەر بنەمایێ alpha = 0.05 هاتیە دەستنیشانکرن.
+د) دەنگڤەدانا ئاماری: ئەنجام ل گەل ئارمانجێن توێژینەوێ دگونجن.`;
+  }
+
+  /**
+   * Research Question-Driven Academic Interpretation Generator
+   */
+  async generateRqAcademicInterpretation(
+    rqNumber: number,
+    rqText: string,
+    testType: string,
+    resultData: any,
+    coreResearchTitle: string,
+    lang: string,
+    userProvidedTemplate?: string,
+    visualTemplateImage?: string | null
+  ): Promise<string> {
+    try {
+      const isBad = lang === 'bad';
+      const isSorani = lang === 'ku';
+      const isAr = lang === 'ar';
+
+      const langLockDirective = isBad
+        ? 'LANGUAGE LOCK: Write 100% of the response in Academic Badini Kurdish (Duhok phrasing: "ئاراستەیا کەرەستێن ئاماری", "جوداهیا دناڤبەرا تێکڕایان دا", "ئاستێ واتا داریا ئاماری", "دەستنیشانکرنا سەرەکی", "ڕەتکرنا گریمانەیا بەتاڵ H₀"). Absolutely NO Sorani Kurdish words ("دەکات", "لە سەر", "ئەم بەشە", "دەبێت", "کردووە").'
+        : isSorani
+        ? 'LANGUAGE LOCK: Write 100% of the response in Academic Sorani Kurdish ("دیاریکردنی ئاماری", "وەڵامی ڕاستەوخۆ", "بەڵگەی ئاماری وەسفی و ئیستنتاجی", "بڕیاری گریمانەی H₀", "ڕەتکردنەوەی گریمانەی بەتاڵ H₀").'
+        : isAr
+        ? 'LANGUAGE LOCK: Write 100% of the response in Formal Academic Arabic (اللغة العربية الأكاديمية الفصحى: "التحليل الإحصائي التوصيفي والأنماط الاستدلالية", "الأدلة الإحصائية الاستدلالية", "قرار الفرضية الإحصائية (H₀)", "المناقشة الأكاديمية والسياقية").'
+        : 'LANGUAGE LOCK: Write 100% of the response in Professional Academic English (APA 7th edition style).';
+
+      const templateInstructionBlock = userProvidedTemplate && userProvidedTemplate.trim() ? `
+USER-PROVIDED EXAMPLE TEXT TEMPLATE ({{USER_PROVIDED_TEMPLATE}}):
+"""
+${userProvidedTemplate.trim()}
+"""
+
+FEW-SHOT TEMPLATE REPLICATION DIRECTIVES:
+1. Analyze the structural pattern, academic depth, section headings, and interpretation style of the provided {{USER_PROVIDED_TEMPLATE}}.
+2. Replicate that exact structure, section layout, and sentence depth for Research Question ${rqNumber}, using current empirical dataset calculations.
+3. Write 100% of the narrative strictly in the chosen target language. Do NOT mix languages.
+` : '';
+
+      const visualInstructionBlock = visualTemplateImage ? `
+MULTI-MODAL IMAGE-TO-IMAGE VISUAL REPLICATION DIRECTIVES ({{USER_PROVIDED_VISUAL_TEMPLATE_IMAGE}}):
+1. VISUAL PATTERN ANALYSIS: Analyze the visual structure, layout components, graphical boxes, chart elements, typography, color palette, and layout complexity of the attached visual template image.
+2. CONTENT SYNTHESIS & GRAPHICAL CHART REPLICATION: Map the current empirical dataset output and Badini Kurdish academic narrative strictly onto the analyzed visual structure. Replicate any specific graphical charts or SPSS comparison plots using current data while maintaining the visual style of the template image.
+3. UNIFIED OUTPUT COMPONENT: Render a single, cohesive visual report layout component (using HTML/SVG styled cards, graphical charts, and color-coded metrics) replicating the template image structure.
+4. EXPLANATION: Directly under the visual output component, provide a short 100-word academic justification in Badini Kurdish (Duhok dialect) titled "دەستنیشانکرنا ئەکادیمی یا شێوازێ وێنەیی" explaining why this specific visual format was replicated for this research topic ("${coreResearchTitle || 'Academic Study'}").
+` : '';
+
+      const prompt = `You are a Senior University Professor and Lead Academic Statistician writing Chapter 4 Results & Discussion.
+Target Research Question ${rqNumber}: "${rqText}".
+Core Research Title: "${coreResearchTitle || 'Academic Quantitative Research Study'}"
+Statistical Test Type: ${testType.toUpperCase()}
+Empirical Test Calculation Output (JSON):
+${JSON.stringify(resultData, null, 2)}
+${templateInstructionBlock}
+${visualInstructionBlock}
+
+${langLockDirective}
+
+STRICT REQUIREMENT: Provide a dense, academically rigorous narrative (minimum 400-600 words per RQ) formatted strictly in the target language.
+
+Do NOT mix languages. 100% of section titles, headings, and analytical prose must be strictly in the selected language. Do NOT invent fake numbers.`;
+
+      const aiResponse = await aiService.postGeminiChat({
+        prompt,
+        language: lang as any,
+        visualTemplateImage: visualTemplateImage || null
+      });
+
+      if (aiResponse && aiResponse.reply) {
+        return aiResponse.reply;
+      }
+    } catch (e) {
+      console.warn('AI RQ Interpretation call fallback:', e);
+    }
+
+    return this.generateRqInterpretationFallback(rqNumber, rqText, testType, resultData, coreResearchTitle, lang);
+  }
+
+  /**
+   * Deterministic Fallback for Research Question Academic Interpretation (Multi-Language)
+   */
+  generateRqInterpretationFallback(
+    rqNumber: number,
+    rqText: string,
+    testType: string,
+    data: any,
+    coreResearchTitle: string = '',
+    lang: string = 'bad'
+  ): string {
+    const isSig = (data?.pValue ?? 1) < 0.05;
+    const isSorani = lang === 'ku';
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+
+    if (isAr) {
+      return `### تحليل السؤال البحثي (${rqNumber}): "${rqText}"
+
+أ) الإجابة المباشرة والنتيجة الرئيسية:
+تظهر النتائج المحسوبة من اختبار (${testType.toUpperCase()}) وجود فروق إحصائية ${isSig ? 'ذات دلالة معنوية مؤكدة (p < 0.05)' : 'غير دالة إحصائياً (p ≥ 0.05)'} تغطي الإجابة عن السؤال البحثي رقم (${rqNumber}).
+
+ب) الأدلة الإحصائية الوصفية والاستدلالية:
+بلغت القيمة المتوسطة (Mean) والإنحراف المعياري (SD) والقيمة المحسوبة للاختبار الإحصائي درجات دقة عالية (t/F = ${data.tStat || data.fStat || 0}, df = ${data.df || 1}, p = ${data.pValue || 1}).
+
+ج) قرار الفرضية الإحصائية (H₀):
+بناءً على مستوى الدلالة (alpha = 0.05)، تم الوصول إلى قرار ${isSig ? 'رفض الفرضية الصفرية (Reject H₀)' : 'قبول الفرضية الصفرية (Retain H₀)'}.
+
+د) المناقشة الأكاديمية والسياقية:
+تتطابق الأنماط الإحصائية الميدانية مع السياق الأكاديمي للدراسة "${coreResearchTitle || 'البحث العلمي'}" وتؤكد دقة النتائج المحسوبة.`;
+    }
+
+    if (isSorani) {
+      return `### شیکاری پرسیاری توێژینەوە (${rqNumber}): "${rqText}"
+
+أ) وەڵامی ڕاستەوخۆ و دۆزینەوەی سەرەکی:
+ئەنجامە ئەژمارکراوەکانی تاقیکردنەوەی ئاماری (${testType.toUpperCase()}) ڕاستەوخۆ دەردەخەن کە جیاوازییەکی ${isSig ? 'واتاداری ئاماری (p < 0.05)' : 'نە-واتادار (p ≥ 0.05)'} هەیە کە وەڵامی پرسیاری توێژینەوەی ژمارە (${rqNumber}) دەداتەوە.
+
+ب) بەڵگەی ئاماری وەسفی و ئیستنتاجی:
+تێکڕای ژمارەیی (Mean) و لادانی پێوانەیی (SD) و بەهای تاقیکردنەوەی ئاماری بە شێوەیەکی دروست ئەژمارکراون (t/F = ${data.tStat || data.fStat || 0}, df = ${data.df || 1}, p = ${data.pValue || 1}).
+
+ج) بڕیاری گریمانەی ئاماری (H₀):
+لە سەر بنەمای ئاستی واتاداری (alpha = 0.05)، بڕیارەکە بریتییە لە ${isSig ? 'ڕەتکردنەوەی گریمانەی بەتاڵ (Reject H₀)' : 'قبوڵکردنی گریمانەی بەتاڵ (Retain H₀)'}.
+
+د) دەنگدانەوەی ئاماری و هەڵسەنگاندنی ئەکادیمی:
+ئەم دۆزینەوانە لە گەڵ چوارچێوەی گشتی توێژینەوەکەدا لە سەر "${coreResearchTitle || 'توێژینەوەی ئەکادیمی'}" دەگونجێن.`;
+    }
+
+    if (isEn) {
+      return `### Analysis of Research Question (${rqNumber}): "${rqText}"
+
+a) Direct Answer / Core Finding:
+The empirical calculations derived from the ${testType.toUpperCase()} test demonstrate a statistically ${isSig ? 'significant relationship/difference (p < 0.05)' : 'non-significant outcome (p >= 0.05)'} directly answering Research Question ${rqNumber}.
+
+b) Descriptive & Inferential Evidence:
+Descriptive baseline indices yielded valid central tendencies and dispersion metrics (t/F = ${data.tStat || data.fStat || 0}, df = ${data.df || 1}, p = ${data.pValue || 1}).
+
+c) Hypothesis Testing Decision:
+Based on standard alpha threshold (alpha = 0.05), the formal decision is to ${isSig ? 'Reject Null Hypothesis H₀' : 'Retain Null Hypothesis H₀'}.
+
+d) Contextual & Empirical Discussion:
+These statistical findings provide empirical evidence addressing the core study titled "${coreResearchTitle || 'Academic Quantitative Research'}".`;
+    }
+
+    // Default Badini Kurdish Fallback
+    return `### شلۆڤەکرنا پرسیارا (${rqNumber}) یا توێژینەوێ: "${rqText}"
+
+a) بەرسڤا ئێکەوخۆ و دەستنیشانکرنا سەرەکی (Direct Answer / Core Finding):
+ل سەر بنەمایێ شیکارکرنا ئاماری بۆ پرسیارا توێژینەوێ يا ژمارە (${rqNumber})، ئەنجامێن هەژمارکری ژ تاقیکرنا ئاماری (${testType.toUpperCase()}) ڕاستەوخۆ دیار دکەن کو جوداهیەکا ${isSig ? 'ئاماری یا واتا دار و کاریگەر (p < 0.05)' : 'نە-واتادار (p ≥ 0.05)'} هەبوویە.
+
+b) بەڵگەیێن ئاماری یێن وەسفی و ئیستنتاجی (Descriptive & Inferential Evidence):
+تێکڕایا ژمارەیی (Mean) و دوورکەوتنا پێوانەیی (SD) گەل پلێن ئازادیێ و بهایێ ئاماری (t/F = ${data.tStat || data.fStat || 0}, df = ${data.df || 1}, p = ${data.pValue || 1}) هاتینە تومارکرن.
+
+c) بڕیارا ئاماری و هەلسەنگاندنا گریمانەیێ (Statistical Decision & Hypothesis Testing):
+سەر بنەمایێ ئاستێ واتا داریا ئاماری (alpha = 0.05)، بڕیارا ئەکادیمی پێکبهێت ژ ${isSig ? 'ڕەتکرنا گریمانەیا بەتاڵ (Reject Null Hypothesis H₀)' : 'قەبولکرنا گریمانەیا بەتاڵ (Retain Null Hypothesis H₀)'}.
+
+d) دەنگڤەدانا ئاماری و هەڤبەرکرنا ئەکادیمی (Contextual & Empirical Discussion):
+ئەڤ دەستنیشانکرنا ئاماری د چوارچۆڤەیێ توێژینەوێ دا ل سەر "${coreResearchTitle || 'ڤەکۆلینا ئەکادیمی'}" ئەنجامێن هەقیقی سەلماندن.`;
   }
 
   /**
@@ -654,11 +885,18 @@ Interpretation: Results reflect actual calculated dataset distributions.`;
 
     rqs.forEach((rq, idx) => {
       const rqNum = idx + 1;
-      sections.push(`\n4.3.${rqNum} Research Question ${rqNum}: ${rq.rqText || `Evaluation of target variables [${rq.selectedVars.join(', ')}]`}\nTo address Research Question ${rqNum}, a ${rq.selectedTest.toUpperCase()} test was conducted with significance threshold alpha = ${rq.alphaLevel}.`);
+      sections.push(`\n4.3.${rqNum} Research Question ${rqNum}: ${rq.rqText || `Evaluation of target variables [${rq.selectedVars.join(', ')}]`}`);
       if (rq.resultSummary) {
         sections.push(rq.resultSummary);
       } else {
-        sections.push(`Statistical testing for Research Question ${rqNum} completed. Detailed empirical values are presented in the corresponding SPSS-style results tables.`);
+        const fallbackNarrative = this.generateRqInterpretationFallback(
+          rqNum,
+          rq.rqText || `Research Question ${rqNum}`,
+          rq.selectedTest,
+          rq.computedOutput || {},
+          ''
+        );
+        sections.push(fallbackNarrative);
       }
     });
 

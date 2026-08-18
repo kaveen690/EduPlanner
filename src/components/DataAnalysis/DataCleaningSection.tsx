@@ -54,32 +54,66 @@ export const DataCleaningSection: React.FC<DataCleaningSectionProps> = ({
   };
 
   const handleTriggerApply = () => {
-    const actions: string[] = [];
-    if (removeDuplicates) actions.push(`Remove ${auditSummary.duplicateRowsCount} duplicate row(s)`);
-    if (missingAction !== 'leave') actions.push(`Missing values handling: ${missingAction.toUpperCase()}`);
-    if (selectedColsToRemove.length > 0) actions.push(`Drop ${selectedColsToRemove.length} column(s)`);
-    const renameCount = Object.values(columnRenames).filter(v => v.trim()).length;
-    if (renameCount > 0) actions.push(`Rename ${renameCount} variable(s)`);
+    console.log('[DataCleaningSection] handleTriggerApply invoked.', {
+      removeDuplicates,
+      missingAction,
+      selectedColsToRemove,
+      columnRenames,
+      typeOverrides
+    });
 
-    if (actions.length === 0) {
-      onShowToast('info', 'No Actions Selected', 'Please configure at least one data cleaning action before applying.');
-      return;
+    try {
+      const actions: string[] = [];
+      if (removeDuplicates) actions.push(`Remove ${auditSummary.duplicateRowsCount} duplicate row(s)`);
+      if (missingAction !== 'leave') actions.push(`Missing values handling: ${missingAction.toUpperCase()}`);
+      if (selectedColsToRemove.length > 0) actions.push(`Drop ${selectedColsToRemove.length} column(s)`);
+      const renameCount = Object.values(columnRenames).filter(v => v.trim()).length;
+      if (renameCount > 0) actions.push(`Rename ${renameCount} variable(s)`);
+      const typeCount = Object.keys(typeOverrides).length;
+      if (typeCount > 0) actions.push(`Override measurement level for ${typeCount} variable(s)`);
+
+      if (actions.length === 0) {
+        console.log('[DataCleaningSection] No explicit actions configured, executing default cleaning payload directly.');
+        executeCleaning({
+          removeDuplicates,
+          missingValueAction: missingAction,
+          columnRenames,
+          typeOverrides,
+          removeColumns: selectedColsToRemove
+        });
+        return;
+      }
+
+      setPendingActionDescription(actions.join(' • '));
+      setShowConfirmModal(true);
+    } catch (err) {
+      console.error('[DataCleaningSection] Exception in handleTriggerApply:', err);
+      onShowToast('error', 'Trigger Error', 'An unexpected error occurred while preparing data cleaning.');
     }
+  };
 
-    setPendingActionDescription(actions.join(' • '));
-    setShowConfirmModal(true);
+  const executeCleaning = (options: DataCleaningOptions) => {
+    try {
+      console.log('[DataCleaningSection] Executing onApplyCleaning payload:', options);
+      onApplyCleaning(options);
+      console.log('[DataCleaningSection] Payload sent to parent onApplyCleaning successfully.');
+      onShowToast('success', 'Data Cleaning Applied', 'Dataset successfully updated.');
+    } catch (err) {
+      console.error('[DataCleaningSection] Exception in executeCleaning:', err);
+      onShowToast('error', 'Execution Error', 'Failed to apply data cleaning rules.');
+    }
   };
 
   const confirmAndApply = () => {
+    console.log('[DataCleaningSection] confirmAndApply modal confirmed.');
     setShowConfirmModal(false);
-    onApplyCleaning({
+    executeCleaning({
       removeDuplicates,
       missingValueAction: missingAction,
       columnRenames,
       typeOverrides,
       removeColumns: selectedColsToRemove
     });
-    onShowToast('success', 'Data Cleaning Applied', 'Dataset successfully updated.');
   };
 
   return (

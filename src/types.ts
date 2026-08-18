@@ -929,6 +929,8 @@ export interface UserProfile {
   academicLevel?: string;
   subscriptionTier?: SubscriptionTier;
   selectedProvider?: AiProvider;
+  aiCalls?: number;
+  status?: string;
   createdAt: string;
 }
 

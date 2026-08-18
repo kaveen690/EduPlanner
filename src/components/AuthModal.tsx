@@ -72,7 +72,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLoading(true);
     setErrorMessage(null);
 
-    const { user, error } = await supabaseAuth.signUpWithEmail(email, password, name || email.split('@')[0]);
+    const { user, error } = await supabaseAuth.signUpWithEmail(
+      email,
+      password,
+      name || email.split('@')[0],
+      institution,
+      academicLevel
+    );
     setLoading(false);
 
     if (error) {
@@ -378,7 +384,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Dr. Kaveen Hussein"
+                        placeholder="Kaveen Hussein"
                         className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         required
                       />

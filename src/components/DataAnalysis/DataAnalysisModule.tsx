@@ -126,13 +126,45 @@ export const DataAnalysisModule: React.FC<DataAnalysisModuleProps> = ({
   };
 
   const handleApplyCleaning = (options: DataCleaningOptions) => {
-    const cleanedRows = dataAnalysisService.applyCleaning(rows, options);
-    setRows(cleanedRows);
-    if (cleanedRows.length > 0) {
-      const newHeaders = Object.keys(cleanedRows[0]);
-      setHeaders(newHeaders);
-      const newAudit = dataAnalysisService.audit(cleanedRows);
-      setAuditSummary(newAudit);
+    console.log('[DataAnalysisModule] handleApplyCleaning called with payload:', options);
+    try {
+      if (!rows || rows.length === 0) {
+        console.warn('[DataAnalysisModule] Cannot clean empty dataset.');
+        showToast('info', 'Empty Dataset', 'No dataset rows available to clean.');
+        return;
+      }
+
+      const cleanedRows = dataAnalysisService.applyCleaning(rows, options);
+      console.log(`[DataAnalysisModule] applyCleaning executed: ${cleanedRows.length} rows remaining (original: ${rows.length}).`);
+      setRows(cleanedRows);
+
+      if (cleanedRows.length > 0) {
+        const newHeaders = Object.keys(cleanedRows[0]);
+        setHeaders(newHeaders);
+        const newAudit = dataAnalysisService.audit(cleanedRows);
+
+        // Preserve variable typeOverrides across dataset re-audit
+        if (options.typeOverrides && Object.keys(options.typeOverrides).length > 0) {
+          const renames = options.columnRenames || {};
+          newAudit.variables = newAudit.variables.map(v => {
+            const originalCol = Object.keys(renames).find(orig => renames[orig] === v.name) || v.name;
+            const override = options.typeOverrides[v.name] || options.typeOverrides[originalCol];
+            if (override) {
+              return { ...v, measurementLevel: override };
+            }
+            return v;
+          });
+        }
+
+        setAuditSummary(newAudit);
+        console.log('[DataAnalysisModule] Successfully updated global dataset state, headers, and audit summary.');
+      } else {
+        console.warn('[DataAnalysisModule] Data cleaning resulted in 0 remaining rows.');
+        showToast('error', 'All Rows Removed', 'The configured cleaning rules removed all dataset rows.');
+      }
+    } catch (err) {
+      console.error('[DataAnalysisModule] Exception in handleApplyCleaning:', err);
+      showToast('error', 'Cleaning Failed', 'An error occurred while cleaning dataset variables.');
     }
   };
 
