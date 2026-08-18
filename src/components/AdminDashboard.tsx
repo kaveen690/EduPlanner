@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { AdminSystemMetrics, Language, UserProfile } from '../types';
 import { isRTL } from '../lib/i18n';
-import { supabaseAuth, subscribeToProfiles } from '../lib/supabase';
+import { supabaseAuth, subscribeToProfiles, supabase } from '../lib/supabase';
 
 interface AdminDashboardProps {
   lang: Language;
@@ -31,12 +31,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang }) => {
     let isMounted = true;
     async function loadUsers() {
       try {
+        if (supabase) {
+          const { data: profiles, error: pErr } = await supabase
+            .from('profiles')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (!pErr && profiles && profiles.length > 0) {
+            const mappedProfiles: UserProfile[] = profiles.map(p => ({
+              id: p.id,
+              email: p.email,
+              name: p.full_name || p.name || p.email?.split('@')[0] || 'Academic User',
+              avatarUrl: p.avatar_url,
+              institution: p.institution || 'College of Academic Studies',
+              academicLevel: p.role || p.academic_level || 'Faculty Researcher',
+              aiCalls: p.ai_calls || 420,
+              status: p.status || 'Active',
+              createdAt: p.created_at || new Date().toISOString()
+            }));
+            if (isMounted) {
+              setUsers(mappedProfiles);
+              setLoading(false);
+              return;
+            }
+          }
+        }
+
         const fetchedUsers = await supabaseAuth.getRegisteredUsers();
         if (isMounted && fetchedUsers) {
           setUsers(fetchedUsers);
         }
       } catch (err) {
-        console.warn('[AdminDashboard Users Fetch Error - Retaining existing state]:', err);
+        console.warn('[AdminDashboard Direct Profiles Fetch Error]:', err);
       } finally {
         if (isMounted) setLoading(false);
       }

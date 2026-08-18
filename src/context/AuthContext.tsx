@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserProfile } from '../types';
-import { supabaseAuth } from '../lib/supabase';
+import { supabaseAuth, supabase } from '../lib/supabase';
 
 interface AuthContextType {
   currentUser: UserProfile | null;
@@ -23,6 +23,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const user = await supabaseAuth.getSessionUser();
         if (isMounted) {
           setCurrentUser(user);
+        }
+
+        if (supabase) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            await supabase.from('profiles').upsert({
+              id: session.user.id,
+              email: session.user.email,
+              full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || user?.name || session.user.email?.split('@')[0] || 'Academic User',
+              role: 'Faculty Researcher',
+              status: 'Active'
+            });
+          }
         }
       } catch (err) {
         console.error('[AuthContext] Error getting session user:', err);

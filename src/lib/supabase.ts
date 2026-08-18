@@ -56,7 +56,27 @@ export const subscribeToProfiles = (onProfileChange: (profile: UserProfile) => v
 
   try {
     const channel = supabase
-      .channel('public:users_realtime')
+      .channel('public:realtime_profiles_and_users')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        (payload) => {
+          if (payload.new) {
+            const u = payload.new as any;
+            onProfileChange({
+              id: u.id,
+              email: u.email,
+              name: u.full_name || u.name || u.email?.split('@')[0] || 'Academic User',
+              avatarUrl: u.avatar_url,
+              institution: u.institution || 'College of Academic Studies',
+              academicLevel: u.academic_level || u.role || 'Faculty Researcher',
+              aiCalls: u.ai_calls || u.aiCalls || 420,
+              status: u.status || 'Active',
+              createdAt: u.created_at || new Date().toISOString()
+            });
+          }
+        }
+      )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'users' },
@@ -66,12 +86,12 @@ export const subscribeToProfiles = (onProfileChange: (profile: UserProfile) => v
             onProfileChange({
               id: u.id,
               email: u.email,
-              name: u.name || u.email?.split('@')[0] || 'Academic User',
+              name: u.full_name || u.name || u.email?.split('@')[0] || 'Academic User',
               avatarUrl: u.avatar_url,
               institution: u.institution || 'College of Academic Studies',
-              academicLevel: u.academic_level || 'Faculty Researcher',
-              aiCalls: 420,
-              status: 'Active',
+              academicLevel: u.academic_level || u.role || 'Faculty Researcher',
+              aiCalls: u.ai_calls || u.aiCalls || 420,
+              status: u.status || 'Active',
               createdAt: u.created_at || new Date().toISOString()
             });
           }
@@ -129,7 +149,7 @@ export const supabaseAuth = {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           const { data: profile } = await supabase
-            .from('users')
+            .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
@@ -138,11 +158,31 @@ export const supabaseAuth = {
             const userObj: UserProfile = {
               id: profile.id,
               email: profile.email,
-              name: profile.name,
+              name: profile.full_name || profile.name,
               avatarUrl: profile.avatar_url,
               institution: profile.institution,
-              academicLevel: profile.academic_level,
+              academicLevel: profile.role || profile.academic_level,
               createdAt: profile.created_at
+            };
+            localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(userObj));
+            return userObj;
+          }
+
+          const { data: userRow } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (userRow) {
+            const userObj: UserProfile = {
+              id: userRow.id,
+              email: userRow.email,
+              name: userRow.name,
+              avatarUrl: userRow.avatar_url,
+              institution: userRow.institution,
+              academicLevel: userRow.academic_level,
+              createdAt: userRow.created_at
             };
             localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(userObj));
             return userObj;
@@ -151,7 +191,7 @@ export const supabaseAuth = {
           const userObj: UserProfile = {
             id: session.user.id,
             email: session.user.email || '',
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Researcher',
+            name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Researcher',
             avatarUrl: session.user.user_metadata?.avatar_url,
             createdAt: session.user.created_at
           };
@@ -180,18 +220,41 @@ export const supabaseAuth = {
 
   async saveRegisteredUser(user: UserProfile): Promise<void> {
     if (supabase && user.id) {
+      const fullName = user.name || (user.email ? user.email.split('@')[0] : 'Academic User');
+      const role = user.academicLevel || 'Faculty Researcher';
+      const status = user.status || 'Active';
+
+      // 1. Auto-insert/upsert to 'profiles' table
       try {
-        await supabase.from('users').upsert({
+        await supabase.from('profiles').upsert({
           id: user.id,
           email: user.email,
-          name: user.name,
+          full_name: fullName,
+          name: fullName,
+          role: role,
+          academic_level: role,
           institution: user.institution || 'College of Academic Studies',
-          academic_level: user.academicLevel || 'Faculty Researcher',
+          status: status,
           avatar_url: user.avatarUrl || '',
           created_at: user.createdAt || new Date().toISOString()
         });
       } catch (e) {
-        console.warn('[Supabase saveRegisteredUser warning]:', e);
+        console.warn('[Supabase profiles table upsert warning]:', e);
+      }
+
+      // 2. Auto-insert/upsert to 'users' table
+      try {
+        await supabase.from('users').upsert({
+          id: user.id,
+          email: user.email,
+          name: fullName,
+          institution: user.institution || 'College of Academic Studies',
+          academic_level: role,
+          avatar_url: user.avatarUrl || '',
+          created_at: user.createdAt || new Date().toISOString()
+        });
+      } catch (e) {
+        console.warn('[Supabase users table upsert warning]:', e);
       }
     }
 
@@ -214,27 +277,64 @@ export const supabaseAuth = {
 
   async getRegisteredUsers(): Promise<UserProfile[]> {
     if (supabase) {
+      const combinedMap = new Map<string, UserProfile>();
+
+      // 1. Fetch from 'profiles' table
       try {
-        const { data: users, error } = await supabase
+        const { data: profiles, error: pErr } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!pErr && profiles && profiles.length > 0) {
+          profiles.forEach(p => {
+            combinedMap.set(p.id || p.email, {
+              id: p.id,
+              email: p.email,
+              name: p.full_name || p.name || p.email?.split('@')[0] || 'Academic User',
+              avatarUrl: p.avatar_url,
+              institution: p.institution || 'College of Academic Studies',
+              academicLevel: p.role || p.academic_level || 'Faculty Researcher',
+              aiCalls: p.ai_calls || p.aiCalls || 420,
+              status: p.status || 'Active',
+              createdAt: p.created_at || new Date().toISOString()
+            });
+          });
+        }
+      } catch (err) {
+        console.warn('[Supabase select profiles warning]:', err);
+      }
+
+      // 2. Fetch from 'users' table
+      try {
+        const { data: users, error: uErr } = await supabase
           .from('users')
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (!error && users && users.length > 0) {
-          return users.map(u => ({
-            id: u.id,
-            email: u.email,
-            name: u.name || u.email?.split('@')[0] || 'Academic User',
-            avatarUrl: u.avatar_url,
-            institution: u.institution || 'College of Academic Studies',
-            academicLevel: u.academic_level || 'Faculty Researcher',
-            aiCalls: 420,
-            status: 'Active',
-            createdAt: u.created_at || new Date().toISOString()
-          }));
+        if (!uErr && users && users.length > 0) {
+          users.forEach(u => {
+            if (!combinedMap.has(u.id) && !combinedMap.has(u.email)) {
+              combinedMap.set(u.id || u.email, {
+                id: u.id,
+                email: u.email,
+                name: u.name || u.email?.split('@')[0] || 'Academic User',
+                avatarUrl: u.avatar_url,
+                institution: u.institution || 'College of Academic Studies',
+                academicLevel: u.academic_level || 'Faculty Researcher',
+                aiCalls: 420,
+                status: 'Active',
+                createdAt: u.created_at || new Date().toISOString()
+              });
+            }
+          });
         }
       } catch (err) {
-        console.warn('[Supabase getRegisteredUsers warning]:', err);
+        console.warn('[Supabase select users warning]:', err);
+      }
+
+      if (combinedMap.size > 0) {
+        return Array.from(combinedMap.values());
       }
     }
 
