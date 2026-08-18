@@ -22,11 +22,71 @@ export let supabase: SupabaseClient | null = null;
 
 if (isSupabaseConfigured()) {
   try {
-    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: window.localStorage
+      }
+    });
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
+        const userProfile: UserProfile = {
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Academic User',
+          institution: session.user.user_metadata?.institution || 'College of Academic Studies',
+          academicLevel: session.user.user_metadata?.academic_level || 'Faculty Researcher',
+          avatarUrl: session.user.user_metadata?.avatar_url || '',
+          aiCalls: 420,
+          status: 'Active',
+          createdAt: session.user.created_at || new Date().toISOString()
+        };
+        await supabaseAuth.saveRegisteredUser(userProfile);
+      }
+    });
   } catch (err) {
     console.warn('[Supabase Client Init Warning]:', err);
   }
 }
+
+export const subscribeToProfiles = (onProfileChange: (profile: UserProfile) => void) => {
+  if (!supabase) return () => {};
+
+  try {
+    const channel = supabase
+      .channel('public:users_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'users' },
+        (payload) => {
+          if (payload.new) {
+            const u = payload.new as any;
+            onProfileChange({
+              id: u.id,
+              email: u.email,
+              name: u.name || u.email?.split('@')[0] || 'Academic User',
+              avatarUrl: u.avatar_url,
+              institution: u.institution || 'College of Academic Studies',
+              academicLevel: u.academic_level || 'Faculty Researcher',
+              aiCalls: 420,
+              status: 'Active',
+              createdAt: u.created_at || new Date().toISOString()
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase?.removeChannel(channel);
+    };
+  } catch (e) {
+    console.warn('[Supabase Realtime Subscription Warning]:', e);
+    return () => {};
+  }
+};
 
 // Local Storage Fallback Keys
 const LOCAL_STORAGE_KEYS = {
@@ -65,37 +125,56 @@ export const DEFAULT_STATS: UserStatistics = {
 export const supabaseAuth = {
   async getSessionUser(): Promise<UserProfile | null> {
     if (supabase) {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        // Fetch profile from public.users table
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
 
-        if (profile) {
-          return {
-            id: profile.id,
-            email: profile.email,
-            name: profile.name,
-            avatarUrl: profile.avatar_url,
-            institution: profile.institution,
-            academicLevel: profile.academic_level,
-            createdAt: profile.created_at
+          if (profile) {
+            const userObj: UserProfile = {
+              id: profile.id,
+              email: profile.email,
+              name: profile.name,
+              avatarUrl: profile.avatar_url,
+              institution: profile.institution,
+              academicLevel: profile.academic_level,
+              createdAt: profile.created_at
+            };
+            localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(userObj));
+            return userObj;
+          }
+
+          const userObj: UserProfile = {
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Researcher',
+            avatarUrl: session.user.user_metadata?.avatar_url,
+            createdAt: session.user.created_at
           };
+          localStorage.setItem(LOCAL_STORAGE_KEYS.USER, JSON.stringify(userObj));
+          return userObj;
         }
-        return {
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Researcher',
-          avatarUrl: session.user.user_metadata?.avatar_url,
-          createdAt: session.user.created_at
-        };
+      } catch (err) {
+        console.warn('[Supabase getSessionUser Error]:', err);
       }
     }
 
-    // When unauthenticated, strictly return null (no mock auto-login)
+    // Persisted session fallback in localStorage
+    const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.USER);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.email) {
+          return parsed;
+        }
+      } catch (e) {}
+    }
+
+    // Return null if guest device / no active session exists
     return null;
   },
 

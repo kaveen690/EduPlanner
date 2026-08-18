@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { AdminSystemMetrics, Language, UserProfile } from '../types';
 import { isRTL } from '../lib/i18n';
-import { supabaseAuth } from '../lib/supabase';
+import { supabaseAuth, subscribeToProfiles } from '../lib/supabase';
 
 interface AdminDashboardProps {
   lang: Language;
@@ -30,14 +30,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang }) => {
   useEffect(() => {
     let isMounted = true;
     async function loadUsers() {
-      const fetchedUsers = await supabaseAuth.getRegisteredUsers();
-      if (isMounted) {
-        setUsers(fetchedUsers);
-        setLoading(false);
+      try {
+        const fetchedUsers = await supabaseAuth.getRegisteredUsers();
+        if (isMounted && fetchedUsers) {
+          setUsers(fetchedUsers);
+        }
+      } catch (err) {
+        console.warn('[AdminDashboard Users Fetch Error - Retaining existing state]:', err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
     }
     loadUsers();
-    return () => { isMounted = false; };
+
+    // Enable Supabase Realtime subscription for automatic UI updates
+    const unsubscribe = subscribeToProfiles((updatedProfile) => {
+      if (!isMounted) return;
+      setUsers((prevUsers) => {
+        const index = prevUsers.findIndex(u => u.id === updatedProfile.id || u.email === updatedProfile.email);
+        if (index >= 0) {
+          const newArr = [...prevUsers];
+          newArr[index] = { ...newArr[index], ...updatedProfile };
+          return newArr;
+        } else {
+          return [updatedProfile, ...prevUsers];
+        }
+      });
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   const rtl = isRTL(lang);

@@ -50,6 +50,8 @@ export default function App() {
       setLoadingAuth(false);
       if (!user) {
         setIsAuthOpen(true);
+      } else if (user.email === 'workingkaveenhussein@gmail.com' || user.name === 'Kaveen Hussein') {
+        setCurrentMode('admin');
       }
     }).catch((err) => {
       console.warn('[EduPlanner Auth Init]: No active session', err);
