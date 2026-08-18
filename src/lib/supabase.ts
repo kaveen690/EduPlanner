@@ -95,16 +95,8 @@ export const supabaseAuth = {
       }
     }
 
-    // Local Storage Fallback
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.USER);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        return DEFAULT_DEMO_USER;
-      }
-    }
-    return DEFAULT_DEMO_USER;
+    // When unauthenticated, strictly return null (no mock auto-login)
+    return null;
   },
 
   async saveRegisteredUser(user: UserProfile): Promise<void> {
@@ -178,9 +170,6 @@ export const supabaseAuth = {
     const current = await this.getSessionUser();
     if (current && !userList.some(u => u.id === current.id || u.email === current.email)) {
       userList.unshift(current);
-    }
-    if (userList.length === 0) {
-      userList = [DEFAULT_DEMO_USER];
     }
     return userList.map(u => ({
       ...u,
@@ -336,7 +325,10 @@ export const supabaseAuth = {
   },
 
   async updateUserProfile(profile: Partial<UserProfile>): Promise<UserProfile> {
-    const current = await this.getSessionUser() || DEFAULT_DEMO_USER;
+    const current = await this.getSessionUser();
+    if (!current) {
+      throw new Error('No authenticated user session found.');
+    }
     const updated = { ...current, ...profile };
 
     await this.saveRegisteredUser(updated);

@@ -35,16 +35,27 @@ export default function App() {
   const [recentProjects, setRecentProjects] = useState<ProjectItem[]>([]);
 
   // Phase 3 Auth & Phase 8 Subscription / Provider state
+  // Initialized to null to strictly enforce authentication
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState<boolean>(true);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<AiProvider>('gemini');
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
 
-  // Load saved user, dark mode, language, and projects on mount
+  // Load saved user session on mount
   useEffect(() => {
     supabaseAuth.getSessionUser().then((user) => {
-      if (user) setCurrentUser(user);
+      setCurrentUser(user);
+      setLoadingAuth(false);
+      if (!user) {
+        setIsAuthOpen(true);
+      }
+    }).catch((err) => {
+      console.warn('[EduPlanner Auth Init]: No active session', err);
+      setCurrentUser(null);
+      setLoadingAuth(false);
+      setIsAuthOpen(true);
     });
 
     const savedProjects = localStorage.getItem('eduplanner_projects') || localStorage.getItem('researchai_projects');
@@ -118,6 +129,71 @@ export default function App() {
   };
 
   const rtl = isRTL(lang);
+
+  // 1. Loading Splash Screen
+  if (loadingAuth) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white p-4">
+        <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center animate-pulse mb-4">
+          <span className="font-extrabold text-xl text-white">EP</span>
+        </div>
+        <h2 className="text-lg font-bold">EduPlanner AI</h2>
+        <p className="text-xs text-slate-400 mt-1">Verifying Academic Credentials & Session...</p>
+      </div>
+    );
+  }
+
+  // 2. Protected Route Gate: Force Authentication if user === null
+  if (!currentUser) {
+    return (
+      <ErrorBoundary>
+        <div
+          dir={rtl ? 'rtl' : 'ltr'}
+          className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white p-6 relative overflow-hidden"
+        >
+          {/* Background Ambient Glow */}
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative max-w-md w-full text-center space-y-6 bg-slate-900/90 border border-slate-800 p-8 rounded-3xl shadow-2xl backdrop-blur-md">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/30">
+              <span className="font-black text-2xl text-white">EP</span>
+            </div>
+
+            <div className="space-y-2">
+              <h1 className="text-2xl font-extrabold text-white">Authentication Required</h1>
+              <p className="text-xs text-slate-400">
+                Access to EduPlanner AI tools, literature reviews, SPSS analysis, and academic generators requires a verified user account.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setIsAuthOpen(true)}
+              className="w-full py-3.5 px-6 rounded-2xl font-bold text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2"
+            >
+              Sign In or Create Account
+            </button>
+          </div>
+
+          {/* Mandatory Auth Modal */}
+          <AuthModal
+            isOpen={isAuthOpen}
+            onClose={() => {
+              if (currentUser) setIsAuthOpen(false);
+            }}
+            currentUser={currentUser}
+            onUserUpdated={(usr) => {
+              setCurrentUser(usr);
+              if (usr) setIsAuthOpen(false);
+            }}
+            lang={lang}
+            onShowToast={showToast}
+          />
+
+          <ToastContainer toasts={toasts} onDismiss={handleDismissToast} />
+        </div>
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <ErrorBoundary>
