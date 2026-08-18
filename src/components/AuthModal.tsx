@@ -39,6 +39,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     currentUser ? 'profile' : 'signin'
   );
 
+  const activeMode = !currentUser && mode === 'profile' ? 'signin' : mode;
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState(currentUser?.name || '');

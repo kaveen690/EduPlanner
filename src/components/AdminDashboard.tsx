@@ -31,6 +31,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang }) => {
     let isMounted = true;
     async function loadUsers() {
       try {
+        const currentUser = await supabaseAuth.getSessionUser();
+        const isAdmin = currentUser?.email === 'workingkaveenhussein@gmail.com' || currentUser?.name === 'Kaveen Hussein';
+
+        if (!isAdmin) {
+          if (isMounted) {
+            setUsers(currentUser ? [currentUser] : []);
+            setLoading(false);
+          }
+          return;
+        }
+
         if (supabase) {
           const { data: profiles, error: pErr } = await supabase
             .from('profiles')

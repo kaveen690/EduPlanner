@@ -43,9 +43,17 @@ export default function App() {
   const [selectedProvider, setSelectedProvider] = useState<AiProvider>('gemini');
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
 
-  // Load saved user session on mount
+  // Load saved user session on mount with 1.2s timeout fallback
   useEffect(() => {
+    let finished = false;
+    const timer = setTimeout(() => {
+      if (!finished) {
+        setLoadingAuth(false);
+      }
+    }, 1200);
+
     supabaseAuth.getSessionUser().then((user) => {
+      finished = true;
       setCurrentUser(user);
       setLoadingAuth(false);
       if (!user) {
@@ -54,6 +62,7 @@ export default function App() {
         setCurrentMode('admin');
       }
     }).catch((err) => {
+      finished = true;
       console.warn('[EduPlanner Auth Init]: No active session', err);
       setCurrentUser(null);
       setLoadingAuth(false);
@@ -84,7 +93,11 @@ export default function App() {
       setCurrentMode('chat');
     };
     window.addEventListener('eduplanner:navigate_chat', handleChatNav);
-    return () => window.removeEventListener('eduplanner:navigate_chat', handleChatNav);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('eduplanner:navigate_chat', handleChatNav);
+    };
   }, []);
 
   const showToast = (type: ToastNotification['type'], title: string, message?: string) => {
@@ -129,6 +142,15 @@ export default function App() {
     localStorage.setItem('eduplanner_projects', JSON.stringify(updated));
     showToast('info', 'Item Removed', 'Deleted from recent history.');
   };
+
+  const isAdmin = currentUser?.email === 'workingkaveenhussein@gmail.com' || currentUser?.name === 'Kaveen Hussein';
+
+  useEffect(() => {
+    if (currentMode === 'admin' && currentUser && !isAdmin) {
+      setCurrentMode('dashboard');
+      showToast('error', 'Access Restricted', 'Admin & Analytics dashboard is restricted to primary admin accounts only.');
+    }
+  }, [currentMode, currentUser, isAdmin]);
 
   const rtl = isRTL(lang);
 
@@ -176,9 +198,9 @@ export default function App() {
             </button>
           </div>
 
-          {/* Mandatory Auth Modal */}
+          {/* Mandatory Auth Modal - Always visible when unauthenticated */}
           <AuthModal
-            isOpen={isAuthOpen}
+            isOpen={true}
             onClose={() => {
               if (currentUser) setIsAuthOpen(false);
             }}
@@ -208,6 +230,7 @@ export default function App() {
           currentMode={currentMode}
           onSelectMode={(mode) => setCurrentMode(mode)}
           lang={lang}
+          currentUser={currentUser}
         />
 
         {/* Main Container */}
@@ -346,7 +369,7 @@ export default function App() {
               />
             )}
 
-            {currentMode === 'admin' && (
+            {currentMode === 'admin' && isAdmin && (
               <AdminDashboard
                 lang={lang}
               />

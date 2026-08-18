@@ -21,7 +21,7 @@ import {
   Wand2,
   FolderOpen
 } from 'lucide-react';
-import { AppMode, Language } from '../types';
+import { UserProfile, AppMode, Language } from '../types';
 import { t, isRTL } from '../lib/i18n';
 import { EduPlannerLogo } from './EduPlannerLogo';
 
@@ -29,6 +29,7 @@ interface SidebarProps {
   currentMode: AppMode;
   onSelectMode: (mode: AppMode) => void;
   lang: Language;
+  currentUser?: UserProfile | null;
 }
 
 interface NavGroup {
@@ -36,10 +37,12 @@ interface NavGroup {
   items: { mode: AppMode; labelKey: any; icon: React.ReactNode; color: string }[];
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentMode, onSelectMode, lang }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ currentMode, onSelectMode, lang, currentUser }) => {
   const [collapsed, setCollapsed] = useState(false);
 
-  const navGroups: NavGroup[] = [
+  const isAdmin = currentUser?.email === 'workingkaveenhussein@gmail.com' || currentUser?.name === 'Kaveen Hussein';
+
+  const rawNavGroups: NavGroup[] = [
     {
       title: 'General',
       items: [
@@ -89,10 +92,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentMode, onSelectMode, lan
       title: 'Settings & Team',
       items: [
         { mode: 'collaboration', labelKey: 'navCollaboration', icon: <Users className="w-4 h-4" />, color: 'text-blue-400' },
-        { mode: 'admin', labelKey: 'navAdmin', icon: <Activity className="w-4 h-4" />, color: 'text-purple-400' }
+        ...(isAdmin ? [{ mode: 'admin' as AppMode, labelKey: 'navAdmin', icon: <Activity className="w-4 h-4" />, color: 'text-purple-400' }] : [])
       ]
     }
   ];
+
+  const navGroups = rawNavGroups;
 
   const rtl = isRTL(lang);
 
