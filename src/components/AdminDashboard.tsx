@@ -9,9 +9,6 @@ import {
   Search,
   Server,
   Zap,
-  TrendingUp,
-  Clock,
-  Layers,
   Loader2
 } from 'lucide-react';
 import { AdminSystemMetrics, Language, UserProfile, isAdminUser } from '../types';
@@ -23,12 +20,95 @@ interface AdminDashboardProps {
   currentUser?: UserProfile | null;
 }
 
+const getAdminLabels = (lang: Language) => {
+  const isEn = lang === 'en';
+  const isAr = lang === 'ar';
+  const isKu = lang === 'ku';
+
+  return {
+    execBadge: isEn
+      ? 'Executive Admin Dashboard & Real-Time Monitoring'
+      : isAr
+      ? 'لوحة التحكم التنفيذية والمراقبة الفورية'
+      : isKu
+      ? 'داشبۆردی کارگێڕی جێبەجێکار و چاودێری ڕاستەوخۆ'
+      : 'داشبۆردێ کارگێڕی یێ جێبەجێکار و چاودێرییا دەستبەجێ',
+    title: isEn
+      ? 'System Analytics, User Management & Infrastructure Metrics'
+      : isAr
+      ? 'تحليلات النظام، إدارة المستخدمين ومؤشرات البنية التحتية'
+      : isKu
+      ? 'شیکارییەکانی سیستم، بەڕێوەبردنی بەکارهێنەران و پێوەرەکانی ژێرخان'
+      : 'شیکارییێن سیستمەی، بەڕێوەبرنا بەکارهێنەران و پێوەرێن ژێرخانێ',
+    subTitle: isEn
+      ? 'Monitor API token usage, user session metrics, SPSS execution stats, database connection health, and enterprise access levels.'
+      : isAr
+      ? 'مراقبة استخدام رموز API، ومؤشرات الجلسات، وإحصائيات SPSS، وصحة قواعد البيانات ومستويات الوصول.'
+      : isKu
+      ? 'چاودێریکردنی بەکارهێنانی API، ئاماری دانیشتنەکان، ئاماری SPSS و تەندروستی داتابێس.'
+      : 'چاودێریکرنا بکارئینانا توکنێن API، ئامارا ڕوونشتنان، ئامارێن SPSS و ساخلەمیا داتابێسێ.',
+    systemHealth: isEn ? 'System Health' : isAr ? 'صحة النظام' : isKu ? 'تەندروستی سیستم' : 'ساخلەمیا سیستمەی',
+    uptime: isEn ? 'Uptime' : isAr ? 'وقت التشغيل' : isKu ? 'بێ وەستان' : 'بێ وەستان',
+    optimal: isEn ? 'Optimal' : isAr ? 'ممتاز' : isKu ? 'نایاب' : 'ئایدیاڵ / نایاب',
+
+    totalUsers: isEn ? 'Total Users' : isAr ? 'إجمالي المستخدمين' : isKu ? 'تەواوی بەکارهێنەران' : 'کۆیا بەکارهێنەران',
+    thisMonth: isEn ? '+14% this month' : isAr ? '+14% هذا الشهر' : isKu ? '+14% ئەم مانگە' : '+14% ڤێ مەهێ',
+    active24h: isEn ? 'active in last 24h' : isAr ? 'نشط خلال 24 ساعة' : isKu ? 'چالاک لە 24 کاتژمێری ڕابردوو' : 'چالاک د 24 ژمێرێن بۆری دا',
+
+    monthlyExec: isEn ? 'Monthly AI Executions' : isAr ? 'عمليات الذكاء الاصطناعي الشهرية' : isKu ? 'جێبەجێکردنەکانی زەیری دەستکردی مانگانە' : 'کردارێن ژیرییا دەستکرد یێن مەهانە',
+    tokens: isEn ? '+22% tokens' : isAr ? '+22% رموز' : isKu ? '+22% تۆکن' : '+22% توکن',
+    avgResponse: isEn ? 'Average response time: 480ms' : isAr ? 'متوسط زمن الاستجابة: 480ms' : isKu ? 'ناوەندی کاتی وەڵامدانەوە: 480ms' : 'تێکراوا دەمێ بەرسڤدانێ: 480ms',
+
+    cloudStorage: isEn ? 'Cloud Storage' : isAr ? 'التخزين السحابي' : isKu ? 'عەمبارکرنی هەور' : 'گەنجینەیا عەور (کلاود)',
+    ofLimit: isEn ? 'of 100 GB limit' : isAr ? 'من أصل 100 جيجابايت' : isKu ? 'لە کۆی 100 گیگابایت' : 'ژ کۆیا 100 GB سنوور',
+    storageSync: isEn ? 'Supabase & LocalStorage sync' : isAr ? 'مزامنة Supabase و LocalStorage' : isKu ? 'هاوكاتکردنی Supabase و LocalStorage' : 'هەڤدەمییا Supabase و LocalStorage',
+
+    apiReliability: isEn ? 'API Reliability' : isAr ? 'موثوقية API' : isKu ? 'پشتڕاستیی API' : 'پڕباوەرییا API',
+    zeroDowntime: isEn ? 'Zero downtime' : isAr ? 'بدون توقف' : isKu ? 'بێ ڕاگیران' : 'بێ ڕاوەستیان',
+    serverHealthy: isEn ? 'Gemini 2.5 & Express server healthy' : isAr ? 'خادم Gemini و Express يعمل بكفاءة' : isKu ? 'سێرڤەری Gemini و Express تەندروستە' : 'سێرڤەرێ Gemini و Express یێ ساخلەمە',
+
+    userDirectoryHeader: isEn ? 'Academic User Directory & Permissions' : isAr ? 'دليل المستخدمين الأكاديميين والصلاحيات' : isKu ? 'ڕێبەری بەکارهێنەرانی ئەکادیمی و مۆڵەتەکان' : 'ڕێبەرێ بەکارهێنەرێن ئەکادیمی و مۆڵەت',
+    searchPlaceholder: isEn ? 'Search user, email, institution...' : isAr ? 'البحث عن مستخدم، بريد، مؤسسة...' : isKu ? 'گەڕان بۆ بەکارهێنەر، ئیمەیڵ، دامەزراوە...' : 'گەڕیان بۆ بەکارهێنەر، ئیمەیڵ، دامەزراوە...',
+
+    thUserEmail: isEn ? 'User / Email' : isAr ? 'المستخدم / البريد' : isKu ? 'بەکارهێنەر / ئیمەیڵ' : 'بەکارهێنەر / ئیمەیڵ',
+    thRole: isEn ? 'Academic Role' : isAr ? 'الدور الأكاديمي' : isKu ? 'ڕۆڵی ئەکادیمی' : 'پلەیا ئەکادیمی',
+    thInstitution: isEn ? 'Institution' : isAr ? 'المؤسسة' : isKu ? 'دامەزراوە' : 'دامەزراوە / زانکۆ',
+    thAiExecutions: isEn ? 'AI Executions' : isAr ? 'تنفيذات الذكاء الاصطناعي' : isKu ? 'داواکارییەکانی AI' : 'داواکارییێن ژیرییا دەستکرد',
+    thStatus: isEn ? 'Status' : isAr ? 'الحالة' : isKu ? 'بارودۆخ' : 'بارودۆخ',
+
+    fetchingUsers: isEn ? 'Fetching registered users from database...' : isAr ? 'جاري جلب المستخدمين من قاعدة البيانات...' : isKu ? 'هێنانی بەکارهێنەران لە داتابێسەوە...' : 'خەریکە بەکارهێنەران ژ داتابێسێ دئینیت...',
+    noUsersMatch: isEn ? 'No registered users match your search query.' : isAr ? 'لا يوجد مستخدمون يطابقون البحث.' : isKu ? 'هیچ بەکارهێنەرێک نەدۆزرایەوە.' : 'هیچ بەکارهێنەرەک نۆتێ بۆ گەڕیانێ نەهاتە لێگەڕین.',
+
+    infraHeader: isEn ? 'Infrastructure Node Status' : isAr ? 'حالة نودات البنية التحتية' : isKu ? 'بارودۆخی نۆدەکانی ژێرخان' : 'بارودۆخێ نۆدێن ژێرخانێ',
+    geminiNode: isEn ? 'Google Gemini API Node' : isAr ? 'عقدة Google Gemini API' : isKu ? 'نۆدی Google Gemini API' : 'نۆدا Google Gemini API',
+    geminiSub: isEn ? 'Gemini 2.5 Flash & Fallback Active' : isAr ? 'نموذج Gemini 2.5 والاحتياطي فعال' : isKu ? 'مۆدێلی Gemini 2.5 و جێگرەوە چالاکە' : 'مۆدێلێ Gemini 2.5 و جێگرەڤە یێ چالاکە',
+
+    supabaseNode: isEn ? 'Supabase Cloud Auth & RLS' : isAr ? 'مصادقة Supabase وحماية RLS' : isKu ? 'ڕێگەپێدانی Supabase و پاراستنی RLS' : 'ڕێگەپێدانا Supabase و پاراستنا RLS',
+    supabaseSub: isEn ? 'PostgreSQL Auth Middleware Active' : isAr ? 'برمجية PostgreSQL الوسيطة فعالة' : isKu ? 'سیستمی PostgreSQL چالاکە' : 'سیستمێ PostgreSQL یێ چالاکە',
+
+    spssNode: isEn ? 'SPSS Computation Engine' : isAr ? 'محرك الحسابات الإحصائية SPSS' : isKu ? 'مۆتۆری شیکاری ئاماری SPSS' : 'مۆتۆرێ شیکاریا ئاماری یا SPSS',
+    spssSub: isEn ? 'Vector Math & Matrix Solvers Ready' : isAr ? 'محرك الرياضيات والمصفوفات جاهز' : isKu ? 'سیستمی بیرکاری و ماتریس ئامادەیە' : 'سیستمێ ماتماتیک و ماتریس ئامادەیە',
+
+    accessRestricted: isEn ? 'Admin Access Restricted' : isAr ? 'صلاحية الدخول مقتصرة على المسؤول' : isKu ? 'دەسەڵاتی ئەدمین سنووردارکراوە' : 'دەسەڵاتا ئەدمینی سنووردارە',
+    accessRestrictedDesc: isEn
+      ? 'The Admin & Analytics dashboard and Academic User Directory are restricted exclusively to primary administrator accounts (Kaveen Hussein). Regular academic accounts do not have permission to view system metrics or user records.'
+      : isAr
+      ? 'لوحة التحكم والتحليلات ودليل المستخدمين مقتصرة حصرياً على حسابات المسؤول الرئيسي. لا تملك الحسابات العادية صلاحية لعرض المؤشرات.'
+      : isKu
+      ? 'داشبۆردی کارگێڕی و شیکاری تەنها بۆ ئەکاونتە سەرەکییەکانی ئەدمین ڕێگەپێدراوە. بەکارهێنەرانی ئاسایی مۆڵەتی دیداری زانیارییەکانیان نییە.'
+      : 'داشبۆردێ کارگێڕی و شیکاریێ بتنێ بۆ ئەکاونتێن سەرەکی یێن ئەدمینی ڕێگەپێدراوە. بەکارهێنەرێن ئاسایی مۆڵەتا لێڕوانینا داتایان نینە.',
+    activeStatus: isEn ? 'Active' : isAr ? 'نشط' : isKu ? 'چالاک' : 'چالاک',
+    calls: isEn ? 'calls' : isAr ? 'عملية' : isKu ? 'داواکاری' : 'داواکاری'
+  };
+};
+
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUser }) => {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isAdmin = isAdminUser(currentUser);
+  const labels = getAdminLabels(lang);
 
   useEffect(() => {
     let isMounted = true;
@@ -102,7 +182,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUse
       isMounted = false;
       unsubscribe();
     };
-  }, []);
+  }, [currentUser]);
 
   const rtl = isRTL(lang);
 
@@ -124,35 +204,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUse
 
   if (!isAdmin) {
     return (
-      <div className="max-w-xl mx-auto my-16 p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-4 shadow-2xl">
+      <div className={`max-w-xl mx-auto my-16 p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-4 shadow-2xl ${rtl ? 'rtl' : 'ltr'}`}>
         <div className="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto">
           <ShieldAlert className="w-8 h-8" />
         </div>
-        <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">Admin Access Restricted</h3>
+        <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">{labels.accessRestricted}</h3>
         <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-          The Admin & Analytics dashboard and Academic User Directory are restricted exclusively to primary administrator accounts (Kaveen Hussein). Regular academic accounts do not have permission to view system metrics or user records.
+          {labels.accessRestrictedDesc}
         </p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-8">
+    <div className={`max-w-7xl mx-auto p-4 md:p-6 space-y-8 ${rtl ? 'rtl' : 'ltr'}`}>
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-purple-950 via-slate-900 to-slate-950 text-white shadow-lg border border-purple-800">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-xs font-semibold">
-            <Activity className="w-3.5 h-3.5" /> Executive Admin Dashboard & Real-Time Monitoring
+            <Activity className="w-3.5 h-3.5" /> {labels.execBadge}
           </div>
-          <h2 className="text-xl md:text-2xl font-bold">System Analytics, User Management & Infrastructure Metrics</h2>
+          <h2 className="text-xl md:text-2xl font-bold">{labels.title}</h2>
           <p className="text-xs md:text-sm text-purple-200">
-            Monitor API token usage, user session metrics, SPSS execution stats, database connection health, and enterprise access levels.
+            {labels.subTitle}
           </p>
         </div>
 
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold shrink-0">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          System Health: {metrics.systemHealth} ({metrics.apiSuccessRate}% Uptime)
+          {labels.systemHealth}: {labels.optimal} ({metrics.apiSuccessRate}% {labels.uptime})
         </div>
       </div>
 
@@ -161,7 +241,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUse
         {/* Total Users */}
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Users</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{labels.totalUsers}</span>
             <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400">
               <Users className="w-4 h-4" />
             </div>
@@ -170,15 +250,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUse
             <span className="text-2xl font-extrabold text-slate-900 dark:text-white">
               {metrics.totalUsersCount.toLocaleString()}
             </span>
-            <span className="text-[11px] font-bold text-emerald-500">+14% this month</span>
+            <span className="text-[11px] font-bold text-emerald-500">{labels.thisMonth}</span>
           </div>
-          <p className="text-[11px] text-slate-400">{metrics.activeUsers24h} active in last 24h</p>
+          <p className="text-[11px] text-slate-400">{metrics.activeUsers24h} {labels.active24h}</p>
         </div>
 
         {/* Monthly AI Calls */}
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Monthly AI Executions</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{labels.monthlyExec}</span>
             <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
               <Cpu className="w-4 h-4" />
             </div>
@@ -187,15 +267,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUse
             <span className="text-2xl font-extrabold text-slate-900 dark:text-white">
               {metrics.monthlyAiCallsCount.toLocaleString()}
             </span>
-            <span className="text-[11px] font-bold text-emerald-500">+22% tokens</span>
+            <span className="text-[11px] font-bold text-emerald-500">{labels.tokens}</span>
           </div>
-          <p className="text-[11px] text-slate-400">Average response time: 480ms</p>
+          <p className="text-[11px] text-slate-400">{labels.avgResponse}</p>
         </div>
 
         {/* Cloud Storage Used */}
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Cloud Storage</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{labels.cloudStorage}</span>
             <div className="p-2 rounded-xl bg-teal-50 dark:bg-teal-950 text-teal-600 dark:text-teal-400">
               <Database className="w-4 h-4" />
             </div>
@@ -204,15 +284,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUse
             <span className="text-2xl font-extrabold text-slate-900 dark:text-white">
               {metrics.totalStorageUsedGB} GB
             </span>
-            <span className="text-[11px] font-bold text-slate-400">of 100 GB limit</span>
+            <span className="text-[11px] font-bold text-slate-400">{labels.ofLimit}</span>
           </div>
-          <p className="text-[11px] text-slate-400">Supabase & LocalStorage sync</p>
+          <p className="text-[11px] text-slate-400">{labels.storageSync}</p>
         </div>
 
         {/* API Latency & Uptime */}
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">API Reliability</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{labels.apiReliability}</span>
             <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400">
               <Zap className="w-4 h-4" />
             </div>
@@ -221,9 +301,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUse
             <span className="text-2xl font-extrabold text-slate-900 dark:text-white">
               {metrics.apiSuccessRate}%
             </span>
-            <span className="text-[11px] font-bold text-emerald-500">Zero downtime</span>
+            <span className="text-[11px] font-bold text-emerald-500">{labels.zeroDowntime}</span>
           </div>
-          <p className="text-[11px] text-slate-400">Gemini 2.5 & Express server healthy</p>
+          <p className="text-[11px] text-slate-400">{labels.serverHealthy}</p>
         </div>
       </div>
 
@@ -231,7 +311,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUse
       <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
           <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Users className="w-5 h-5 text-purple-500" /> Academic User Directory & Permissions
+            <Users className="w-5 h-5 text-purple-500" /> {labels.userDirectoryHeader}
           </h3>
 
           <div className="relative w-full sm:w-64">
@@ -240,7 +320,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUse
               type="text"
               value={userSearchQuery}
               onChange={(e) => setUserSearchQuery(e.target.value)}
-              placeholder="Search user, email, institution..."
+              placeholder={labels.searchPlaceholder}
               className="w-full pl-9 pr-3.5 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-purple-500 outline-none"
             />
           </div>
@@ -251,11 +331,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUse
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 font-bold uppercase tracking-wider">
-                <th className="pb-3">User / Email</th>
-                <th className="pb-3">Academic Role</th>
-                <th className="pb-3">Institution</th>
-                <th className="pb-3">AI Executions</th>
-                <th className="pb-3 text-right">Status</th>
+                <th className="pb-3">{labels.thUserEmail}</th>
+                <th className="pb-3">{labels.thRole}</th>
+                <th className="pb-3">{labels.thInstitution}</th>
+                <th className="pb-3">{labels.thAiExecutions}</th>
+                <th className="pb-3 text-right">{labels.thStatus}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium text-slate-800 dark:text-slate-200">
@@ -263,13 +343,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUse
                 <tr>
                   <td colSpan={5} className="py-6 text-center text-slate-500">
                     <Loader2 className="w-5 h-5 animate-spin mx-auto text-purple-600 mb-1" />
-                    Fetching registered users from database...
+                    {labels.fetchingUsers}
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-6 text-center text-slate-500">
-                    No registered users match your search query.
+                    {labels.noUsersMatch}
                   </td>
                 </tr>
               ) : (
@@ -281,10 +361,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUse
                     </td>
                     <td className="py-3">{u.academicLevel || 'Faculty Researcher'}</td>
                     <td className="py-3 font-semibold text-purple-600 dark:text-purple-400">{u.institution || 'College of Academic Studies'}</td>
-                    <td className="py-3 font-mono font-bold">{u.aiCalls || 420} calls</td>
+                    <td className="py-3 font-mono font-bold">{u.aiCalls || 420} {labels.calls}</td>
                     <td className="py-3 text-right">
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                        {u.status || 'Active'}
+                        {u.status || labels.activeStatus}
                       </span>
                     </td>
                   </tr>
@@ -298,32 +378,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUse
       {/* System Infrastructure Health Monitor */}
       <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-          <Server className="w-5 h-5 text-indigo-500" /> Infrastructure Node Status
+          <Server className="w-5 h-5 text-indigo-500" /> {labels.infraHeader}
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
           <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 space-y-1">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-900 dark:text-white">Google Gemini API Node</span>
+              <span className="font-bold text-slate-900 dark:text-white">{labels.geminiNode}</span>
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
             </div>
-            <p className="text-slate-500">Gemini 2.5 Flash & Fallback Active</p>
+            <p className="text-slate-500">{labels.geminiSub}</p>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 space-y-1">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-900 dark:text-white">Supabase Cloud Auth & RLS</span>
+              <span className="font-bold text-slate-900 dark:text-white">{labels.supabaseNode}</span>
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
             </div>
-            <p className="text-slate-500">PostgreSQL Auth Middleware Active</p>
+            <p className="text-slate-500">{labels.supabaseSub}</p>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 space-y-1">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-900 dark:text-white">SPSS Computation Engine</span>
+              <span className="font-bold text-slate-900 dark:text-white">{labels.spssNode}</span>
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
             </div>
-            <p className="text-slate-500">Vector Math & Matrix Solvers Ready</p>
+            <p className="text-slate-500">{labels.spssSub}</p>
           </div>
         </div>
       </div>

@@ -1316,6 +1316,8 @@ export function getAcademicLevels(lang: Language): SelectOption[] {
   switch (lang) {
     case 'bad':
       return [
+        { value: 'University Teacher', label: 'مامۆستایێ زانکۆیێ (University Teacher)' },
+        { value: 'Academic Researcher', label: 'توێژەرێ ئەکادیمی (Academic Researcher)' },
         { value: 'Doctoral Dissertation (Ph.D.)', label: 'تێزا دکتۆرایێ (Ph.D.)' },
         { value: "Master's Thesis (M.Sc. / M.A.)", label: 'تێزا ماستەرێ (M.Sc. / M.A.)' },
         { value: "Bachelor's Thesis (B.Sc. / B.A.)", label: 'تێزا بەکالۆریۆسێ (B.Sc. / B.A.)' },
@@ -1324,6 +1326,8 @@ export function getAcademicLevels(lang: Language): SelectOption[] {
       ];
     case 'ku':
       return [
+        { value: 'University Teacher', label: 'مامۆستای زانکۆ (University Teacher)' },
+        { value: 'Academic Researcher', label: 'توێژەری ئەکادیمی (Academic Researcher)' },
         { value: 'Doctoral Dissertation (Ph.D.)', label: 'دکتۆرانامە (Ph.D.)' },
         { value: "Master's Thesis (M.Sc. / M.A.)", label: 'نامەی ماستەر (M.Sc. / M.A.)' },
         { value: "Bachelor's Thesis (B.Sc. / B.A.)", label: 'توێژینەوەی بەکالۆریۆس (B.Sc. / B.A.)' },
@@ -1332,6 +1336,8 @@ export function getAcademicLevels(lang: Language): SelectOption[] {
       ];
     case 'ar':
       return [
+        { value: 'University Teacher', label: 'أستاذ جامعي (University Teacher)' },
+        { value: 'Academic Researcher', label: 'باحث أكاديمي (Academic Researcher)' },
         { value: 'Doctoral Dissertation (Ph.D.)', label: 'أطروحة الدكتوراه (Ph.D.)' },
         { value: "Master's Thesis (M.Sc. / M.A.)", label: 'رسالة الماجستير (M.Sc. / M.A.)' },
         { value: "Bachelor's Thesis (B.Sc. / B.A.)", label: 'مشروع التخرج للبكالوريوس (B.Sc. / B.A.)' },
@@ -1340,6 +1346,8 @@ export function getAcademicLevels(lang: Language): SelectOption[] {
       ];
     default:
       return [
+        { value: 'University Teacher', label: 'University Teacher' },
+        { value: 'Academic Researcher', label: 'Academic Researcher' },
         { value: 'Doctoral Dissertation (Ph.D.)', label: 'Doctoral Dissertation (Ph.D.)' },
         { value: "Master's Thesis (M.Sc. / M.A.)", label: "Master's Thesis (M.Sc. / M.A.)" },
         { value: "Bachelor's Thesis (B.Sc. / B.A.)", label: "Bachelor's Thesis (B.Sc. / B.A.)" },

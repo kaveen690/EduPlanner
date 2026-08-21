@@ -940,6 +940,8 @@ export interface UserProfile {
   selectedProvider?: AiProvider;
   aiCalls?: number;
   status?: string;
+  role?: string;
+  isAdmin?: boolean;
   createdAt: string;
 }
 
@@ -948,6 +950,8 @@ export function isAdminUser(user: UserProfile | null | undefined): boolean {
   const email = (user.email || '').toLowerCase().trim();
   const name = (user.name || '').toLowerCase().trim();
   return (
+    user.role === 'admin' ||
+    user.isAdmin === true ||
     email === 'workingkaveenhussein@gmail.com' ||
     email === 'workingjaveenhussein@gmail.com' ||
     email.includes('kaveen') ||

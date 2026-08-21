@@ -254,14 +254,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <select
                     value={academicLevel}
                     onChange={(e) => setAcademicLevel(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                   >
-                    <option value="Undergraduate Student">Undergraduate Student</option>
+                    <option value="University Teacher">University Teacher</option>
+                    <option value="Academic Researcher">Academic Researcher</option>
                     <option value="Master Candidate">Master Candidate</option>
                     <option value="PhD Scholar">PhD Scholar</option>
                     <option value="Faculty / Senior Researcher">Faculty / Senior Researcher</option>
                     <option value="Postdoctoral Researcher">Postdoctoral Researcher</option>
                     <option value="Executive Administrator">Executive Administrator</option>
+                    <option value="Undergraduate Student">Undergraduate Student</option>
                   </select>
                 </div>
               </div>
