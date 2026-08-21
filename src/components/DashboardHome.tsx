@@ -240,66 +240,73 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
   return (
     <div className="space-y-8 max-w-7xl mx-auto p-4 md:p-6">
       {/* Premium Modern Enterprise Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 p-6 md:p-10 text-white shadow-2xl border border-blue-500/20">
+      <div 
+        dir={rtl ? 'rtl' : 'ltr'}
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 p-6 md:p-10 text-white shadow-2xl border border-blue-500/20"
+      >
         {/* Animated Background Shapes */}
         <div className="absolute top-0 right-0 -mt-16 -mr-16 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl pointer-events-none animate-float-slow" />
         <div className="absolute bottom-0 left-1/4 -mb-16 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
         <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="relative z-10 max-w-4xl space-y-4">
+        <div className="relative z-10 max-w-4xl space-y-5">
           {/* Tagline Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-extrabold text-cyan-300 shadow-sm">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-cyan-300 shadow-sm">
             <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse" />
-            <span className="font-display">Plan Smarter. Research Faster. Learn Better.</span>
+            <span className="font-display tracking-wide">{t('heroTagline', lang)}</span>
           </div>
 
           {/* Title */}
           <h2 className="text-3xl md:text-5xl font-black tracking-tight leading-tight font-display">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-cyan-300">
-              EduPlanner AI
+              {t('heroTitle', lang)}
             </span>
           </h2>
 
           {/* Subtitle */}
           <p className="text-slate-200 text-sm md:text-base leading-relaxed font-medium max-w-3xl">
-            The Complete AI Platform for Research, SPSS Analysis, Academic Writing, Seminar Creation, APA 7 Citation, Literature Review, Thesis Writing, and Intelligent Educational Planning.
+            {t('heroSubtitle', lang)}
           </p>
 
           {/* Quick Action Buttons */}
-          <div className="pt-3 flex flex-wrap items-center gap-3">
+          <div className="pt-2 flex flex-wrap items-center gap-3">
             <button
               onClick={() => onSelectMode('research')}
               className="px-5 py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white shadow-lg shadow-blue-600/35 transition-all duration-200 flex items-center gap-2 transform hover:-translate-y-0.5"
             >
-              <BookOpen className="w-4 h-4 text-cyan-200" /> Start Research
+              <BookOpen className="w-4 h-4 text-cyan-200" />
+              <span>{t('heroStartResearch', lang)}</span>
             </button>
             <button
               onClick={() => onSelectMode('spss')}
               className="px-5 py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/35 transition-all duration-200 flex items-center gap-2 transform hover:-translate-y-0.5"
             >
-              <BarChart3 className="w-4 h-4 text-purple-200" /> Analyze SPSS
+              <BarChart3 className="w-4 h-4 text-purple-200" />
+              <span>{t('heroAnalyzeSpss', lang)}</span>
             </button>
             <button
               onClick={() => onSelectMode('seminar')}
               className="px-5 py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white shadow-lg shadow-cyan-600/35 transition-all duration-200 flex items-center gap-2 transform hover:-translate-y-0.5"
             >
-              <Presentation className="w-4 h-4 text-cyan-100" /> Create Seminar
+              <Presentation className="w-4 h-4 text-cyan-100" />
+              <span>{t('heroCreateSeminar', lang)}</span>
             </button>
             <button
               onClick={() => onSelectMode('report')}
               className="px-5 py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white shadow-lg shadow-emerald-600/35 transition-all duration-200 flex items-center gap-2 transform hover:-translate-y-0.5"
             >
-              <FileText className="w-4 h-4 text-emerald-100" /> Generate Report
+              <FileText className="w-4 h-4 text-emerald-100" />
+              <span>{t('heroGenerateReport', lang)}</span>
             </button>
           </div>
 
           {/* Quick Academic AI Assistant Widget Bar */}
-          <div className="pt-3">
+          <div className="pt-2">
             <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20">
-              <MessageSquare className="w-4 h-4 text-pink-300 ml-2 shrink-0" />
+              <MessageSquare className="w-4 h-4 text-pink-300 px-1 shrink-0" />
               <input
                 type="text"
-                placeholder="Ask EduPlanner AI assistant (e.g. 'Synthesize literature review for microgrids', 'Explain ANOVA output')..."
+                placeholder={t('heroAskPlaceholder', lang)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     onSelectMode('chat');
@@ -311,8 +318,8 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                 onClick={() => onSelectMode('chat')}
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-xs shadow-md shrink-0 transition-all flex items-center gap-1.5"
               >
-                <span>Ask AI</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>{t('heroAskButton', lang)}</span>
+                <ArrowRight className={`w-3.5 h-3.5 ${rtl ? 'rotate-180' : ''}`} />
               </button>
             </div>
           </div>

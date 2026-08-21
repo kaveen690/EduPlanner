@@ -16,16 +16,17 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { SeminarPresentation, SeminarRequest, Language, Slide } from '../types';
-import { t, isRTL } from '../lib/i18n';
+import { t, isRTL, getOutputLanguageOptions } from '../lib/i18n';
 import { exportSeminarToPptx, exportSeminarToPdf, exportSeminarToWord } from '../lib/exportUtils';
 import { aiService } from '../services/aiService';
 
 interface SeminarGeneratorProps {
   lang: Language;
   onSaveProject: (item: any) => void;
+  onLanguageChange?: (newLang: Language) => void;
 }
 
-export const SeminarGenerator: React.FC<SeminarGeneratorProps> = ({ lang, onSaveProject }) => {
+export const SeminarGenerator: React.FC<SeminarGeneratorProps> = ({ lang, onSaveProject, onLanguageChange }) => {
   const [topic, setTopic] = useState('');
   const [audience, setAudience] = useState('');
   const [slideCount, setSlideCount] = useState(8);
@@ -144,7 +145,7 @@ export const SeminarGenerator: React.FC<SeminarGeneratorProps> = ({ lang, onSave
               <textarea
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                placeholder="e.g., Modern Advances in Quantum Computing and Cryptography"
+                placeholder=""
                 required
                 rows={2}
                 className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 outline-none"
@@ -161,7 +162,7 @@ export const SeminarGenerator: React.FC<SeminarGeneratorProps> = ({ lang, onSave
                   type="text"
                   value={audience}
                   onChange={(e) => setAudience(e.target.value)}
-                  placeholder="e.g., University Faculty, Postgraduate Students"
+                  placeholder=""
                   className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 outline-none"
                 />
               </div>
@@ -224,13 +225,16 @@ export const SeminarGenerator: React.FC<SeminarGeneratorProps> = ({ lang, onSave
               </label>
               <select
                 value={outputLang}
-                onChange={(e) => setOutputLang(e.target.value as Language)}
+                onChange={(e) => {
+                  const newLang = e.target.value as Language;
+                  setOutputLang(newLang);
+                  if (onLanguageChange) onLanguageChange(newLang);
+                }}
                 className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 outline-none"
               >
-                <option value="en">English (Academic)</option>
-                <option value="bad">بادینی (کوردی - دهۆک)</option>
-                <option value="ku">کوردی (سۆرانی)</option>
-                <option value="ar">العربية (الأكاديمية)</option>
+                {getOutputLanguageOptions(lang).map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
               </select>
             </div>
 

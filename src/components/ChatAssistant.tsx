@@ -37,7 +37,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { ChatMessage, ChatSession, Language, AttachedFile, AiProvider } from '../types';
-import { isRTL } from '../lib/i18n';
+import { isRTL, t } from '../lib/i18n';
 import { aiService } from '../services/aiService';
 import { supabaseDb } from '../lib/supabase';
 import { FileUploadZone } from './FileUploadZone';
@@ -314,7 +314,13 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({ lang, selectedProv
     }
 
     if (citationVerifyEnabled) {
-      fullUserPrompt += `\n\n[MANDATE]: Strictly verify all in-text citations and reference entries against APA 7th Edition standard formatting before responding.`;
+      if (lang === 'bad' || lang === 'ku') {
+        fullUserPrompt += `\n\n[تکایە هەموو ژێدەران ب ستایلێ APA 7 ڕێکبخە]`;
+      } else if (lang === 'ar') {
+        fullUserPrompt += `\n\n[يرجى توثيق جميع المراجع حسب نظام APA 7]`;
+      } else {
+        fullUserPrompt += `\n\n[Please format citations according to APA 7th edition]`;
+      }
     }
 
     const userMessage: ChatMessage = {
@@ -436,13 +442,13 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({ lang, selectedProv
           </div>
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 font-display">
-              EduPlanner AI Research Assistant
+              {t('chatTitle', lang)}
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-500/20 uppercase tracking-wider">
                 {modelLabel}
               </span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Grounded Document Q&A (PDF/DOCX/Excel/PPTX), SPSS Statistical Explanations, APA 7 Citations & Multi-Session History
+              {t('chatSubtitle', lang)}
             </p>
           </div>
         </div>

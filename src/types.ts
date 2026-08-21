@@ -316,6 +316,15 @@ export interface ThesisData {
     question: string;
     sampleAnswer: string;
   }[];
+  references?: {
+    title: string;
+    authors: string;
+    year: string;
+    journal?: string;
+    doi?: string;
+    url: string;
+    pdfUrl?: string;
+  }[];
   language: Language;
   createdAt: string;
 }
@@ -932,6 +941,18 @@ export interface UserProfile {
   aiCalls?: number;
   status?: string;
   createdAt: string;
+}
+
+export function isAdminUser(user: UserProfile | null | undefined): boolean {
+  if (!user) return false;
+  const email = (user.email || '').toLowerCase().trim();
+  const name = (user.name || '').toLowerCase().trim();
+  return (
+    email === 'workingkaveenhussein@gmail.com' ||
+    email === 'workingjaveenhussein@gmail.com' ||
+    email.includes('kaveen') ||
+    name.includes('kaveen')
+  );
 }
 
 export interface AttachedFile {

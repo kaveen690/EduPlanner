@@ -22,6 +22,7 @@ import {
 import { AcademicSearchResultItem, Language } from '../types';
 import { aiService } from '../services/aiService';
 import { getReferenceLibrary, saveReferenceLibrary } from '../lib/referenceStore';
+import { t } from '../lib/i18n';
 
 interface ResearchDetailsModalProps {
   paper: AcademicSearchResultItem;
@@ -176,35 +177,31 @@ export const ResearchDetailsModal: React.FC<ResearchDetailsModalProps> = ({
               rel="noopener noreferrer"
               className="px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-950/60 hover:bg-orange-100 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800 font-bold flex items-center gap-1.5 transition-all"
             >
-              <ExternalLink className="w-3.5 h-3.5" /> View Paper ↗
+              <ExternalLink className="w-3.5 h-3.5" /> {t('viewPaperBtn', lang)} ↗
             </a>
 
             {/* Download PDF Button */}
-            {paper.pdfUrl ? (
-              <a
-                href={paper.pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 shadow-xs transition-all"
-              >
-                <Download className="w-3.5 h-3.5" /> Download PDF
-              </a>
-            ) : (
-              <button
-                disabled
-                className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 font-bold flex items-center gap-1.5 cursor-not-allowed opacity-60"
-                title="Direct PDF link not available for this publication"
-              >
-                <Download className="w-3.5 h-3.5" /> PDF Not Available
-              </button>
-            )}
+            {(() => {
+              const activePdfUrl = paper.pdfUrl || `https://scholar.google.com/scholar?q=filetype:pdf+${encodeURIComponent(paper.title)}`;
+              return (
+                <a
+                  href={activePdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 shadow-xs transition-all"
+                  title="داگرتنا فایلا PDF / Open Access PDF Search"
+                >
+                  <Download className="w-3.5 h-3.5" /> {t('pdfNotAvailableBtn', lang) === 'فایلا PDF بەردەست نینە' ? 'داگرتنا فایلا PDF' : t('pdfNotAvailableBtn', lang) === 'فایلی PDF بەردەست نییە' ? 'داگرتنی فایلی PDF' : 'Download PDF'}
+                </a>
+              );
+            })()}
 
             {/* Chat with Paper Button */}
             <button
               onClick={handleChatWithPaper}
               className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1.5 shadow-xs transition-all"
             >
-              <MessageSquare className="w-3.5 h-3.5" /> Chat with Paper
+              <MessageSquare className="w-3.5 h-3.5" /> {t('navChat', lang)}
             </button>
           </div>
 
@@ -220,7 +217,7 @@ export const ResearchDetailsModal: React.FC<ResearchDetailsModalProps> = ({
               }`}
             >
               <Bookmark className="w-3.5 h-3.5" />
-              {isSaved ? 'Saved to Library' : 'Save to Library'}
+              {isSaved ? t('savedPaperBtn', lang) : t('savePaperBtn', lang)}
             </button>
           </div>
         </div>

@@ -67,7 +67,7 @@ import {
   PestleAnalysis,
   ReportSectionItem
 } from '../types';
-import { t, isRTL } from '../lib/i18n';
+import { t, isRTL, getOutputLanguageOptions } from '../lib/i18n';
 import {
   exportReportToWord,
   exportReportToPdf,
@@ -78,6 +78,7 @@ import { aiService } from '../services/aiService';
 interface ReportGeneratorProps {
   lang: Language;
   onSaveProject: (item: any) => void;
+  onLanguageChange?: (newLang: Language) => void;
 }
 
 const DEFAULT_SECTIONS = [
@@ -102,7 +103,7 @@ interface AttachedFileItem {
   type: string;
 }
 
-export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ lang, onSaveProject }) => {
+export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ lang, onSaveProject, onLanguageChange }) => {
   // Config state
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
@@ -180,22 +181,8 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ lang, onSavePr
 
   const rtl = isRTL(outputLang);
 
-  // Load saved draft on mount
+  // Keep page clean on mount until user submits
   useEffect(() => {
-    const savedDraft = localStorage.getItem('eduplanner_report_draft');
-    if (savedDraft) {
-      try {
-        const parsed = JSON.parse(savedDraft);
-        if (parsed.title) setTitle(parsed.title);
-        if (parsed.subject) setSubject(parsed.subject);
-        if (parsed.reportType) setReportType(parsed.reportType);
-        if (parsed.academicLevel) setAcademicLevel(parsed.academicLevel);
-        if (parsed.selectedSections) setSelectedSections(parsed.selectedSections);
-        if (parsed.keyFocus) setKeyFocus(parsed.keyFocus);
-      } catch (e) {
-        console.error('Failed to parse saved report draft', e);
-      }
-    }
   }, []);
 
   // File drop handler
@@ -599,7 +586,7 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ lang, onSavePr
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., Strategic Impact Assessment of Digital Higher Education in Kurdistan"
+                  placeholder=""
                   required
                   className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
@@ -615,7 +602,7 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ lang, onSavePr
                     type="text"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    placeholder="e.g., Educational Technology"
+                    placeholder=""
                     className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none"
                   />
                 </div>
@@ -709,17 +696,20 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ lang, onSavePr
               {/* Language Selection */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Target Language
+                  {t('languageSelect', lang)}
                 </label>
                 <select
                   value={outputLang}
-                  onChange={(e) => setOutputLang(e.target.value as Language)}
+                  onChange={(e) => {
+                    const newLang = e.target.value as Language;
+                    setOutputLang(newLang);
+                    if (onLanguageChange) onLanguageChange(newLang);
+                  }}
                   className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none"
                 >
-                  <option value="en">English (Scholarly Academic)</option>
-                  <option value="bad">بادینی (کوردی - دهۆک و بادینان)</option>
-                  <option value="ku">کوردی (سۆرانی)</option>
-                  <option value="ar">العربية (الأكاديمية الفصحى)</option>
+                  {getOutputLanguageOptions(lang).map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
 

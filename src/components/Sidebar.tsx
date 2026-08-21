@@ -21,7 +21,7 @@ import {
   Wand2,
   FolderOpen
 } from 'lucide-react';
-import { UserProfile, AppMode, Language } from '../types';
+import { UserProfile, AppMode, Language, isAdminUser } from '../types';
 import { t, isRTL } from '../lib/i18n';
 import { EduPlannerLogo } from './EduPlannerLogo';
 
@@ -33,24 +33,24 @@ interface SidebarProps {
 }
 
 interface NavGroup {
-  title: string;
+  titleKey: any;
   items: { mode: AppMode; labelKey: any; icon: React.ReactNode; color: string }[];
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentMode, onSelectMode, lang, currentUser }) => {
   const [collapsed, setCollapsed] = useState(false);
 
-  const isAdmin = currentUser?.email === 'workingkaveenhussein@gmail.com' || currentUser?.name === 'Kaveen Hussein';
+  const isAdmin = isAdminUser(currentUser);
 
   const rawNavGroups: NavGroup[] = [
     {
-      title: 'General',
+      titleKey: 'navGroupGeneral',
       items: [
         { mode: 'dashboard', labelKey: 'navDashboard', icon: <LayoutDashboard className="w-4 h-4" />, color: 'text-blue-500' }
       ]
     },
     {
-      title: 'Research',
+      titleKey: 'navGroupResearch',
       items: [
         { mode: 'research', labelKey: 'navResearch', icon: <BookOpen className="w-4 h-4" />, color: 'text-indigo-500' },
         { mode: 'litreview', labelKey: 'navLitReview', icon: <BookOpenCheck className="w-4 h-4" />, color: 'text-cyan-500' },
@@ -60,7 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentMode, onSelectMode, lan
       ]
     },
     {
-      title: 'Writing',
+      titleKey: 'navGroupWriting',
       items: [
         { mode: 'writing', labelKey: 'navWriting', icon: <Wand2 className="w-4 h-4" />, color: 'text-purple-400' },
         { mode: 'report', labelKey: 'navReport', icon: <FileText className="w-4 h-4" />, color: 'text-emerald-500' },
@@ -69,27 +69,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentMode, onSelectMode, lan
       ]
     },
     {
-      title: 'Data Analysis & SPSS',
+      titleKey: 'navGroupDataAnalysis',
       items: [
         { mode: 'data-analysis', labelKey: 'navDataAnalysis', icon: <BarChart3 className="w-4 h-4" />, color: 'text-blue-400' },
         { mode: 'spss', labelKey: 'navSpss', icon: <Activity className="w-4 h-4" />, color: 'text-sky-500' }
       ]
     },
     {
-      title: 'Education',
+      titleKey: 'navGroupEducation',
       items: [
         { mode: 'seminar', labelKey: 'navSeminar', icon: <Presentation className="w-4 h-4" />, color: 'text-amber-500' }
       ]
     },
     {
-      title: 'AI Tools',
+      titleKey: 'navGroupAiTools',
       items: [
         { mode: 'chat', labelKey: 'navChat', icon: <MessageSquare className="w-4 h-4" />, color: 'text-pink-500' },
         { mode: 'plagiarism', labelKey: 'navPlagiarism', icon: <ShieldAlert className="w-4 h-4" />, color: 'text-rose-400' }
       ]
     },
     {
-      title: 'Settings & Team',
+      titleKey: 'navGroupSettings',
       items: [
         { mode: 'collaboration', labelKey: 'navCollaboration', icon: <Users className="w-4 h-4" />, color: 'text-blue-400' },
         ...(isAdmin ? [{ mode: 'admin' as AppMode, labelKey: 'navAdmin', icon: <Activity className="w-4 h-4" />, color: 'text-purple-400' }] : [])
@@ -131,7 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentMode, onSelectMode, lan
           <div key={groupIdx} className="space-y-1">
             {!collapsed && (
               <h3 className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                {group.title}
+                {t(group.titleKey, lang)}
               </h3>
             )}
 

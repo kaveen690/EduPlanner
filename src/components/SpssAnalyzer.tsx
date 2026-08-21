@@ -67,6 +67,7 @@ import { AnalysisResultCharts, InteractiveDataVisualizer } from './SpssCharts';
 interface SpssAnalyzerProps {
   lang: Language;
   onSaveProject: (item: any) => void;
+  onLanguageChange?: (newLang: Language) => void;
 }
 
 export type VariableType = 'Scale' | 'Nominal' | 'Ordinal';
@@ -713,13 +714,13 @@ export const SpssAnalyzer: React.FC<SpssAnalyzerProps> = ({ lang, onSaveProject 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-gradient-to-r from-sky-950 via-slate-900 to-indigo-950 text-white shadow-xl border border-sky-800/50">
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 text-xs font-semibold border border-sky-500/30">
-            <Calculator className="w-4 h-4 text-sky-400" /> Professional SPSS & Data Analysis Studio
+            <Calculator className="w-4 h-4 text-sky-400" /> {t('navSpss', lang)}
           </div>
           <h1 className="text-xl md:text-3xl font-extrabold tracking-tight">
-            SPSS & Academic Data Analytics Engine
+            {t('spssTitle', lang)}
           </h1>
           <p className="text-slate-300 text-xs md:text-sm max-w-2xl leading-relaxed">
-            Upload Excel (.xlsx), CSV, or SPSS (.sav) files to compute Independent T-Tests, Cronbach's alpha, Crosstab Chi-Square, ANOVA, Descriptives, and Regression with original dataset headers.
+            {t('spssSubtitle', lang)}
           </p>
         </div>
 

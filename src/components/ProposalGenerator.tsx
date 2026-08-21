@@ -30,14 +30,15 @@ import {
   FileCheck
 } from 'lucide-react';
 import { FullResearchProposalData, Language, ProjectItem, LitReviewPaperMeta } from '../types';
+import { t, isRTL, getAcademicLevels, getResearchTypes, getOutputLanguageOptions } from '../lib/i18n';
 import { exportProposalToWord, exportProposalToPdf } from '../lib/exportUtils';
-import { isRTL } from '../lib/i18n';
 import { aiService } from '../services/aiService';
 
 interface ProposalGeneratorProps {
   lang: Language;
   onSaveProject: (item: ProjectItem) => void;
   initialProjectData?: any;
+  onLanguageChange?: (newLang: Language) => void;
 }
 
 const SECTION_KEYS = [
@@ -45,7 +46,7 @@ const SECTION_KEYS = [
   { code: '02_abstract', title: '02. Abstract / Summary' },
   { code: '03_introduction', title: '03. Introduction' },
   { code: '04_background', title: '04. Background of the Study' },
-  { code: '05_problem_statement', title: '05. Problem Statement' },
+  { code: '05_problem_statement', title: '05. Statement of the Problem' },
   { code: '06_purpose', title: '06. Purpose of the Study' },
   { code: '07_objectives', title: '07. Research Objectives' },
   { code: '08_questions', title: '08. Research Questions' },
@@ -65,14 +66,70 @@ const SECTION_KEYS = [
   { code: '22_appendices', title: '22. Appendices' }
 ];
 
+function getLocalizedProposalSectionTitle(code: string, lang: Language): string {
+  const isBad = lang === 'bad';
+  const isKu = lang === 'ku';
+  const isAr = lang === 'ar';
+
+  switch (code) {
+    case '01_title_page':
+      return isBad ? '١. لاپەڕێ ناڤنیشانی' : isKu ? '١. لاپەڕەی سەردێڕ' : isAr ? '١. صفحة العنوان' : '01. Title Page';
+    case '02_abstract':
+      return isBad ? '٢. کورتییا زانستی (پوختە)' : isKu ? '٢. پوختەی توێژینەوە' : isAr ? '٢. الملخص الأكاديمي' : '02. Abstract / Summary';
+    case '03_introduction':
+      return isBad ? '٣. پێشەکییا ڤەکۆلینێ' : isKu ? '٣. پێشەکیی توێژینەوە' : isAr ? '٣. المقدمة الأكاديمية' : '03. Introduction';
+    case '04_background':
+      return isBad ? '٤. باکگراوەندا بابەتێ توێژینەوەیێ' : isKu ? '٤. پاشخانی توێژینەوە' : isAr ? '٤. خلفية الدراسة' : '04. Background of the Study';
+    case '05_problem_statement':
+      return isBad ? '٥. دیارکرنا کێشەیا توێژینەوەیێ' : isKu ? '٥. خستنەڕووی کێشەی توێژینەوە' : isAr ? '٥. صياغة مشكلة البحث' : '05. Statement of the Problem';
+    case '06_purpose':
+      return isBad ? '٦. ئارمانجا گشتی یا توێژینەوەیێ' : isKu ? '٦. مەبەستی گشتیی توێژینەوە' : isAr ? '٦. الهدف العام للدراسة' : '06. Purpose of the Study';
+    case '07_objectives':
+      return isBad ? '٧. ئارمانجێن تایبەت ێن توێژینەوەیێ' : isKu ? '٧. ئامانجە تایبەتەکانی توێژینەوە' : isAr ? '٧. الأهداف التفصيلية للبحث' : '07. Research Objectives';
+    case '08_questions':
+      return isBad ? '٨. پرسیارێن توێژینەوەیێ' : isKu ? '٨. پرسیارەکانی توێژینەوە' : isAr ? '٨. أسئلة البحث الأكاديمية' : '08. Research Questions';
+    case '09_hypotheses':
+      return isBad ? '٩. فرضياتێن توێژینەوەیێ (H0 / H1)' : isKu ? '٩. گریمانەکانی توێژینەوە (H0 / H1)' : isAr ? '٩. فرضيات البحث (H0 / H1)' : '09. Research Hypotheses';
+    case '10_significance':
+      return isBad ? '١٠. گرنگیا توێژینەوەیێ (تیۆری و کرداری)' : isKu ? '١٠. گرنگیی توێژینەوە (تیۆری و پراکتیکی)' : isAr ? '١٠. أهمية الدراسة (النظرية والتطبيقية)' : '10. Significance of the Study';
+    case '11_scope':
+      return isBad ? '١١. سنوورێن توێژینەوەیێ (مەیدانی، کاتی، بابەتی)' : isKu ? '١١. سنوورەکانی توێژینەوە' : isAr ? '١١. حدود الدراسة ونطاقها' : '11. Scope and Delimitations';
+    case '12_definition_terms':
+      return isBad ? '١٢. پێناسەکرنا زاراڤێن سەرەکی' : isKu ? '١٢. پێناسەی زاراوە سەرەکییەکان' : isAr ? '١٢. تحديد المصطلحات الأساسية' : '12. Definition of Key Terms';
+    case '13_literature_review':
+      return isBad ? '١٣. پێداچوونا ئەدەبیاتان و لێکۆڵینێن پێشتر' : isKu ? '١٣. پێداچوونەوەی ئەدەبیات' : isAr ? '١٣. مراجعة الأدبيات والدراسات السابقة' : '13. Literature Review';
+    case '14_research_gap':
+      return isBad ? '١٤. دروچەیا زانستی و بوشایی یا توێژینەوەیێ' : isKu ? '١٤. درزی زانستیی توێژینەوە' : isAr ? '١٤. الفجوة البحثية الأكاديمية' : '14. Research Gap';
+    case '15_theoretical_framework':
+      return isBad ? '١٥. چوارچۆڤێ تیۆری یێ توێژینەوەیێ' : isKu ? '١٥. چوارچێوەی تیۆریی توێژینەوە' : isAr ? '١٥. الإطار النظري للدراسة' : '15. Theoretical Framework';
+    case '16_conceptual_framework':
+      return isBad ? '١٦. چوارچۆڤێ مەفهومی و مۆدێلا گۆڕاوان' : isKu ? '١٦. چوارچێوەی چەمکیی توێژینەوە' : isAr ? '١٦. الإطار المفاهيمي ومخطط المتغيرات' : '16. Conceptual Framework';
+    case '17_methodology':
+      return isBad ? '١٧. میتۆدۆلۆجیا توێژینەوەیێ و دیزاینا ئامرازان' : isKu ? '١٧. میتۆدۆلۆجیای توێژینەوە' : isAr ? '١٧. منهجية البحث وأدوات الدراسة' : '17. Research Methodology';
+    case '18_expected_results':
+      return isBad ? '١٨. ئەنجامێن چاڤەڕێکری و بهایێ زانستی' : isKu ? '١٨. ئەنجامە چاوەڕوانکراوەکان' : isAr ? '١٨. النتائج المتوقعة والإسهام الأكاديمي' : '18. Expected Results & Contribution';
+    case '19_limitations':
+      return isBad ? '١٩. ئاستەنگ و ئاستەنگێن چاڤەڕێکری' : isKu ? '١٩. ئاستەنگ و بەربەستەکانی توێژینەوە' : isAr ? '١٩. محددات الدراسة والصعوبات' : '19. Limitations of the Study';
+    case '20_timeline':
+      return isBad ? '٢٠. خشتێ کاتی یێ جێبەجێکرنا توێژینەوەیێ' : isKu ? '٢٠. خشتەی کاتیی ئەنجامدانی توێژینەوە' : isAr ? '٢٠. الجدول الزمني للتنفيذ' : '20. Proposed Research Timeline';
+    case '21_references':
+      return isBad ? '٢١. لیستا ژێدەرێن زانستی (APA 7th)' : isKu ? '٢١. لیستی سەرچاوە زانستییەکان' : isAr ? '٢١. قائمة المراجع الأكاديمية' : '21. References';
+    case '22_appendices':
+      return isBad ? '٢٢. پاشکۆ و ئامرازێن پێوانێ (Appendices)' : isKu ? '٢٢. پاشکۆکانی توێژینەوە' : isAr ? '٢٢. الملاحق وأدوات القياس' : '22. Appendices';
+    default:
+      return code;
+  }
+}
+
 export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
   lang,
   onSaveProject,
-  initialProjectData
+  initialProjectData,
+  onLanguageChange
 }) => {
   // Main Proposal Inputs
   const [title, setTitle] = useState(initialProjectData?.title || '');
-  const [field, setField] = useState(initialProjectData?.field || 'Education & Social Sciences');
+  const [field, setField] = useState(initialProjectData?.field || '');
   const [academicLevel, setAcademicLevel] = useState<'Undergraduate' | "Master's" | 'PhD / Doctoral' | 'Journal Research Proposal' | 'Grant / Research Project'>("Master's");
   const [researchType, setResearchType] = useState<'Quantitative' | 'Qualitative' | 'Mixed Methods' | 'Experimental' | 'Survey' | 'Case Study'>('Quantitative');
   const [proposalDepth, setProposalDepth] = useState<'Short' | 'Standard' | 'Detailed' | 'Doctoral / Comprehensive'>('Detailed');
@@ -130,20 +187,8 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
     }
   }, [initialProjectData]);
 
-  // Load draft from localStorage on mount if available
+  // Keep page clean on mount until user submits
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('eduplanner_proposal_draft');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.title) {
-          setProposal(parsed);
-          setLastSaved(new Date().toLocaleTimeString());
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to restore draft from localStorage', e);
-    }
   }, []);
 
   // Save proposal to localStorage whenever updated
@@ -263,26 +308,62 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
     SECTION_KEYS.forEach(sec => {
       const { words, isGeneric, minTarget, quality } = getSectionMetrics(sec.code);
       totalWords += words;
+      const localizedSecTitle = getLocalizedProposalSectionTitle(sec.code, outputLang);
       if (isGeneric) {
         genericCount++;
-        needsImprovementList.push(`Section "${sec.title}" contains generic template text.`);
+        needsImprovementList.push(
+          outputLang === 'bad' ? `بەشێ "${localizedSecTitle}" دەقێن شۆپلۆنێن گشتی تێدانە.` :
+          outputLang === 'ku' ? `بەشی "${localizedSecTitle}" دەقی گشتی تێدایە.` :
+          outputLang === 'ar' ? `القسم "${localizedSecTitle}" يحتوي على نصوص عامة.` :
+          `Section "${sec.title}" contains generic template text.`
+        );
       } else if (quality === 'Needs Improvement' && sec.code !== '01_title_page' && sec.code !== '20_timeline' && sec.code !== '21_references' && sec.code !== '22_appendices') {
         belowMinCount++;
-        needsImprovementList.push(`"${sec.title}" depth is below target threshold (${words}w / ${minTarget}w). Use [Continue Writing].`);
+        needsImprovementList.push(
+          outputLang === 'bad' ? `ئاستێ کووراتییا بەشێ "${localizedSecTitle}" کەمترە ژ ئاستێ پێویست (${words} ووشە / ${minTarget} ووشە). دوگمەیا [بەردەوامبوونا نڤێسینێ] بکاربینە.` :
+          outputLang === 'ku' ? `قوڵیی بەشی "${localizedSecTitle}" کەمترە لە ڕێژەی پێویست (${words} وشە / ${minTarget} وشە). دوگمەی [بەردەوامبوون لە نووسین] بەکاربهێنە.` :
+          outputLang === 'ar' ? `عمق القسم "${localizedSecTitle}" أقل من الحد المطلوب (${words} كلمة / ${minTarget} كلمة). استخدم زر [متابعة الكتابة].` :
+          `"${sec.title}" depth is below target threshold (${words}w / ${minTarget}w). Use [Continue Writing].`
+        );
       }
     });
 
     // Evaluate Strengths
-    if (proposal.title) strengthsList.push(`✓ Master Topic & Population 100% consistent with research title.`);
-    if (proposal.questionsText && proposal.objectivesText) strengthsList.push('✓ Research questions map 1-to-1 to research objectives.');
+    if (proposal.title) strengthsList.push(
+      outputLang === 'bad' ? '✓ بابەتی سەرهەکی و جڤاکێ توێژینەوەیێ ١٠٠٪ بگۆنجن دگەل ناڤنیشانێ ڤەکۆلینێ.' :
+      outputLang === 'ku' ? '✓ بابەتی سەرەکی و کۆمەڵگەی توێژینەوە ١٠٠٪ هاوتەریبن لەگەڵ سەردێڕی توێژینەوە.' :
+      outputLang === 'ar' ? '✓ الموضوع الرئيسي ومجتمع الدراسة متسقان 100% مع عنوان البحث.' :
+      '✓ Master Topic & Population 100% consistent with research title.'
+    );
+    if (proposal.questionsText && proposal.objectivesText) strengthsList.push(
+      outputLang === 'bad' ? '✓ پرسیارێن توێژینەوەیێ ب شێوەیەکێ ئێکسەر هاوتەریبن دگەل ئارمانجێن توێژینەوەیێ.' :
+      outputLang === 'ku' ? '✓ پرسیارەکانی توێژینەوە هاوتەریبن لەگەڵ ئامانجەکانی توێژینەوە.' :
+      outputLang === 'ar' ? '✓ أسئلة البحث متطابقة 1-إلى-1 مع أهداف البحث.' :
+      '✓ Research questions map 1-to-1 to research objectives.'
+    );
     if (proposal.hypothesesText && (proposal.hypothesesText.includes('H0') || proposal.hypothesesText.includes('H1'))) {
-      strengthsList.push('✓ Research Hypotheses are structured in formal H0/H1 format without fake empirical p-values.');
+      strengthsList.push(
+        outputLang === 'bad' ? '✓ فرضياتێن توێژینەوەیێ د دارشتنەکا فەرمی یا (H0 / H1) دا هاتییە ڕێکخستن.' :
+        outputLang === 'ku' ? '✓ گریمانەکانی توێژینەوە لە سەر شێوازی فەرمیی (H0 / H1) داڕێژراون.' :
+        outputLang === 'ar' ? '✓ فرضيات البحث مصاغة بشكل أكاديمي وفق نموذج H0/H1 الرسمية.' :
+        '✓ Research Hypotheses are structured in formal H0/H1 format without fake empirical p-values.'
+      );
     }
     if (proposal.theoreticalFrameworkText && proposal.theoreticalFrameworkText.length > 500) {
-      strengthsList.push('✓ Theoretical Framework contains detailed construct definitions matching research variables.');
+      strengthsList.push(
+        outputLang === 'bad' ? '✓ چوارچۆڤێ تیۆری پێناسێن تێروتەسەل یێن زاراڤە و گۆڕاوان بخۆڤە دگریت.' :
+        outputLang === 'ku' ? '✓ چوارچێوەی تیۆری پێناسەی تێروتەسەلی چەمکەکان و گۆڕاوەکان لەخۆدەگرێت.' :
+        outputLang === 'ar' ? '✓ الإطار النظري يحتوي على تعاريف مفصلة ومتسقة مع متغيرات البحث.' :
+        '✓ Theoretical Framework contains detailed construct definitions matching research variables.'
+      );
     }
     if (proposal.conceptualFramework?.independentVariables) {
-      strengthsList.push('✓ Conceptual Framework maps independent and dependent variables accurately.');
+      strengthsList.push(
+        outputLang === 'bad' ? '✓ چوارچۆڤێ مەفهومی گۆڕاوێن سەربەخۆ و سەرپێڤەچوو ب دروستی دیار دکەت.' :
+        outputLang === 'ku' ? '✓ چوارچێوەی چەمکی گۆڕاوە سەربەخۆ و بەستراوەکان بێ کێشە دیاری دەکات.' :
+        outputLang === 'ar' ? '✓ الإطار المفاهيمي يحدد المتغيرات المستقلة والتابعة بدقة.' :
+        '✓ Conceptual Framework maps independent and dependent variables accurately.'
+      );
     }
 
     const topicConsistencyScore = genericCount === 0 ? 100 : 70;
@@ -693,7 +774,33 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
       });
 
       if (res && res.newContent) {
-        updateProposalSectionText(sectionCode, res.newContent);
+        const existingText = currentContent.trim();
+        let appendedText = res.newContent.trim();
+
+        // If returned text starts with existing text, extract the new part
+        if (existingText && appendedText.startsWith(existingText)) {
+          appendedText = appendedText.substring(existingText.length).trim();
+        }
+
+        // Split into clean paragraphs
+        const existingParagraphs = existingText ? existingText.split('\n\n').map(p => p.trim()).filter(Boolean) : [];
+        const newParagraphs = appendedText ? appendedText.split('\n\n').map(p => p.trim()).filter(Boolean) : [];
+
+        // Filter out any paragraph that is identical or already contained in existing paragraphs
+        const uniqueNewParagraphs = newParagraphs.filter(np => 
+          !existingParagraphs.some(ep => ep === np || (ep.length > 30 && np.length > 30 && (ep.includes(np) || np.includes(ep))))
+        );
+
+        if (uniqueNewParagraphs.length > 0) {
+          const mergedText = existingParagraphs.length > 0
+            ? [...existingParagraphs, ...uniqueNewParagraphs].join('\n\n')
+            : uniqueNewParagraphs.join('\n\n');
+          updateProposalSectionText(sectionCode, mergedText);
+        } else if (newParagraphs.length > 0) {
+          // Force append new paragraphs to guarantee unlimited clicks
+          const mergedText = [...existingParagraphs, ...newParagraphs].join('\n\n');
+          updateProposalSectionText(sectionCode, mergedText);
+        }
       }
     } catch (e: any) {
       console.error(e);
@@ -776,13 +883,13 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-gradient-to-r from-purple-950 via-slate-900 to-slate-950 text-white rounded-3xl shadow-xl border border-purple-800/50">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-semibold">
-            <GraduationCap className="w-4 h-4" /> Academic & Research Proposal Suite
+            <GraduationCap className="w-4 h-4" /> {t('proposalSuiteTagline', lang)}
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-            Research Proposal Generator & Alignment Engine
+            {t('proposalWorkspaceTitle', lang)}
           </h1>
           <p className="text-slate-300 text-xs md:text-sm">
-            Build exhaustive, 22-section academic research proposals reusing your verified literature, gap analysis, questions, and methodology.
+            {t('proposalWorkspaceDesc', lang)}
           </p>
         </div>
       </div>
@@ -793,7 +900,7 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
-              <strong>Information Notice:</strong> Upstream Literature Review or Methodology not fully completed yet. Proposal Engine will synthesize baseline context for missing sections.
+              <strong>{lang === 'bad' ? 'ئاگادارییا زانیاریان:' : lang === 'ku' ? 'ئاگاداریی زانیارییەکان:' : lang === 'ar' ? 'تنبيه معلومات:' : 'Information Notice:'}</strong> {lang === 'bad' ? 'پێداچوونا ئەدەبیاتان یان میتۆدۆلۆجی یا سەری بەرهەمنەهاتییە. سیستەم دێ زانیاریێن بنەڕەتی بۆ بەشێن مایی پێکڤە گرێدەت.' : lang === 'ku' ? 'پێداچوونەوەی ئەدەبیات یان میتۆدۆلۆجی بە تەواوی تەواو نەکراوە. سیستەم زانیارییە بنەڕەتییەکان ئامادە دەکات.' : lang === 'ar' ? 'مراجعة الأدبيات أو المنهجية السابقة غير مكتملة بعد. سيقوم المحرك بتوليد السياق الأساسي للأقسام المتبقية.' : 'Upstream Literature Review or Methodology not fully completed yet. Proposal Engine will synthesize baseline context for missing sections.'}
             </span>
           </div>
         </div>
@@ -806,13 +913,13 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             <div className="md:col-span-8 space-y-1.5">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Core Research Title / Topic *
+                {t('coreResearchTitle', lang)}
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
-                placeholder="e.g. هۆشیاری داهێنان لای مامۆستایانی باخچەی منداڵان لە پارێزگای دهۆک"
+                placeholder=""
                 required
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-purple-500"
               />
@@ -820,13 +927,13 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
 
             <div className="md:col-span-4 space-y-1.5">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Academic Discipline
+                {t('academicField', lang)}
               </label>
               <input
                 type="text"
                 value={field}
                 onChange={e => setField(e.target.value)}
-                placeholder="e.g. Early Childhood Education & Pedagogy"
+                placeholder=""
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs"
               />
             </div>
@@ -835,61 +942,59 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
           {/* Academic Parameters & Proposal Depth */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Academic Level</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">{t('academicLevelLabel', lang)}</label>
               <select
                 value={academicLevel}
                 onChange={e => setAcademicLevel(e.target.value as any)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-semibold"
               >
-                <option value="Undergraduate">Undergraduate Senior Proposal</option>
-                <option value="Master's">Master's Thesis Proposal (M.Sc. / M.A.)</option>
-                <option value="PhD / Doctoral">PhD / Doctoral Dissertation Proposal</option>
-                <option value="Journal Research Proposal">Journal Research Proposal</option>
-                <option value="Grant / Research Project">Grant / Institutional Project Proposal</option>
+                {getAcademicLevels(lang).map(lvl => (
+                  <option key={lvl.value} value={lvl.value}>{lvl.label}</option>
+                ))}
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Research Design Type</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">{t('paperType', lang)}</label>
               <select
                 value={researchType}
                 onChange={e => setResearchType(e.target.value as any)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-semibold"
               >
-                <option value="Quantitative">Quantitative Correlational / Survey</option>
-                <option value="Qualitative">Qualitative Phenomenological / Case Study</option>
-                <option value="Mixed Methods">Mixed Methods Sequential Explanatory</option>
-                <option value="Experimental">Experimental / Quasi-Experimental</option>
-                <option value="Survey">Cross-Sectional Survey</option>
-                <option value="Case Study">In-Depth Institutional Case Study</option>
+                {getResearchTypes(lang).map(rt => (
+                  <option key={rt.value} value={rt.value}>{rt.label}</option>
+                ))}
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Proposal Depth</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">{t('synthesisDepth', lang)}</label>
               <select
                 value={proposalDepth}
                 onChange={e => setProposalDepth(e.target.value as any)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-semibold"
               >
-                <option value="Short">Short (Outline & Key Sections)</option>
-                <option value="Standard">Standard Academic Proposal</option>
-                <option value="Detailed">Detailed Multi-Paragraph Proposal (Recommended)</option>
-                <option value="Doctoral / Comprehensive">Doctoral / Comprehensive Proposal (Exhaustive)</option>
+                <option value="Short">{lang === 'bad' ? 'کورت (کورتی بەشێن سەرەکی)' : lang === 'ku' ? 'کورت (کورتی بەشە سەرەکییەکان)' : lang === 'ar' ? 'قصير (موجز الأقسام)' : 'Short (Outline & Key Sections)'}</option>
+                <option value="Standard">{lang === 'bad' ? 'پێوانەیی (پڕۆپۆزەلا ستاندارد)' : lang === 'ku' ? 'ستاندارد (پڕۆپۆزەڵی ستاندارد)' : lang === 'ar' ? 'قياسي (مقترح أكاديمي)' : 'Standard Academic Proposal'}</option>
+                <option value="Detailed">{lang === 'bad' ? 'مفصل (پڕۆپۆزەلا پڕ زانیاری)' : lang === 'ku' ? 'ورد (پڕۆپۆزەڵی تێروتەسەل)' : lang === 'ar' ? 'مفصل (مقترح شامل)' : 'Detailed Multi-Paragraph Proposal (Recommended)'}</option>
+                <option value="Doctoral / Comprehensive">{lang === 'bad' ? 'تەمام (ئاستێ دکتۆرایێ)' : lang === 'ku' ? 'تەواو (ئاستی دکتۆرا)' : lang === 'ar' ? 'شامل (مستوى الدكتوراه)' : 'Doctoral / Comprehensive Proposal (Exhaustive)'}</option>
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Output Language (100% Lock)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">{t('outputLanguageLabel', lang)}</label>
               <select
                 value={outputLang}
-                onChange={e => setOutputLang(e.target.value as Language)}
+                onChange={e => {
+                  const newLang = e.target.value as Language;
+                  setOutputLang(newLang);
+                  if (onLanguageChange) onLanguageChange(newLang);
+                }}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-semibold"
               >
-                <option value="en">English (Academic Standard)</option>
-                <option value="bad">بادینی (کوردی - دهۆک)</option>
-                <option value="ku">کوردی (سۆرانی)</option>
-                <option value="ar">العربية (الأكاديمية)</option>
+                {getOutputLanguageOptions(lang).map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -898,9 +1003,9 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
           <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-3">
             <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowMetadataForm(!showMetadataForm)}>
               <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                <User className="w-4 h-4 text-purple-600" /> Title Page Metadata (Researcher, Department & University)
+                <User className="w-4 h-4 text-purple-600" /> {lang === 'bad' ? 'زانیاریێن لاپەڕێ ناڤنیشانی (ڤەکۆلەر، بەش و زانکۆ)' : lang === 'ku' ? 'زانیارییەکانی لاپەڕەی سەردێڕ (توێژەر، بەش و زانکۆ)' : lang === 'ar' ? 'بيانات صفحة العنوان (الباحث، القسم والجامعة)' : 'Title Page Metadata (Researcher, Department & University)'}
               </div>
-              <span className="text-xs text-purple-600 font-bold">{showMetadataForm ? 'Hide Metadata' : 'Edit Metadata'}</span>
+              <span className="text-xs text-purple-600 font-bold">{showMetadataForm ? (lang === 'bad' ? 'شارتنا زانیاریان' : lang === 'ku' ? 'شاراوەکردنی زانیارییەکان' : lang === 'ar' ? 'إخفاء البيانات' : 'Hide Metadata') : (lang === 'bad' ? 'دەستکارییا زانیاریان' : lang === 'ku' ? 'دەستکاریکردنی زانیارییەکان' : lang === 'ar' ? 'تعديل البيانات' : 'Edit Metadata')}</span>
             </div>
 
             {showMetadataForm && (
@@ -909,35 +1014,35 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
                   type="text"
                   value={researcherName}
                   onChange={e => setResearcherName(e.target.value)}
-                  placeholder="ناوی توێژەر / Researcher Name"
+                  placeholder={lang === 'bad' ? 'ناڤێ ڤەکۆلەری' : lang === 'ku' ? 'ناوی توێژەر' : lang === 'ar' ? 'اسم الباحث' : 'Researcher Name'}
                   className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
                 />
                 <input
                   type="text"
                   value={university}
                   onChange={e => setUniversity(e.target.value)}
-                  placeholder="ناوی زانکۆ / University Name"
+                  placeholder={lang === 'bad' ? 'ناڤێ زانکۆیێ' : lang === 'ku' ? 'ناوی زانکۆ' : lang === 'ar' ? 'اسم الجامعة' : 'University Name'}
                   className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
                 />
                 <input
                   type="text"
                   value={college}
                   onChange={e => setCollege(e.target.value)}
-                  placeholder="کۆلێژ / College / Faculty"
+                  placeholder={lang === 'bad' ? 'کۆلێژ / فاکەڵتی' : lang === 'ku' ? 'کۆلێژ / فاکەڵتی' : lang === 'ar' ? 'الكلية / الكلية' : 'College / Faculty'}
                   className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
                 />
                 <input
                   type="text"
                   value={department}
                   onChange={e => setDepartment(e.target.value)}
-                  placeholder="بەش / Department"
+                  placeholder={lang === 'bad' ? 'بەشێ زانستی' : lang === 'ku' ? 'بەشی زانستی' : lang === 'ar' ? 'القسم الأكاديمي' : 'Department'}
                   className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
                 />
                 <input
                   type="text"
                   value={supervisorName}
                   onChange={e => setSupervisorName(e.target.value)}
-                  placeholder="ناوی سەرپەرشتیار / Supervisor Name"
+                  placeholder={lang === 'bad' ? 'ناڤێ سەرپەرشتیاری' : lang === 'ku' ? 'ناوی سەرپەرشتیار' : lang === 'ar' ? 'اسم المشرف' : 'Supervisor Name'}
                   className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
                 />
                 <input
@@ -957,7 +1062,9 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
             className="w-full md:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            {loading ? 'Synthesizing 22-Section Academic Research Proposal...' : 'Generate Full Research Proposal'}
+            {loading
+              ? (lang === 'bad' ? 'د پێکهێنانا پڕۆپۆزەلا زانستی دا (٢٢ بەش)...' : lang === 'ku' ? 'لە دروستکردنی پڕۆپۆزەڵی زانستیدا (٢٢ بەش)...' : lang === 'ar' ? 'جاري توليد المقترح الأكاديمي الشامل (22 قسماً)...' : 'Synthesizing 22-Section Academic Research Proposal...')
+              : (lang === 'bad' ? 'بەرهەمهێنانا پڕۆپۆزەلا زانستییا تەمام 🪄' : lang === 'ku' ? 'بەرهەمهێنانی پڕۆپۆزەڵی تەواوی زانستی 🪄' : lang === 'ar' ? 'توليد المقترح الأكاديمي الشامل 🪄' : 'Generate Full Research Proposal')}
           </button>
         </form>
       </div>
@@ -1014,7 +1121,7 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
                 className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1.5"
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied ? 'Copied' : 'Copy All'}
+                {copied ? t('copiedBtn', outputLang) : t('copyBtn', outputLang)}
               </button>
               <button
                 onClick={() => exportProposalToWord(proposal)}
@@ -1036,7 +1143,7 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-800 pb-2">
               <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-sm">
                 <ShieldCheck className="w-4 h-4 text-purple-600" />
-                Academic Alignment & Proposal Diagnostic Engine
+                {outputLang === 'bad' ? 'ماتۆڕێ شیکاریا ڕاستگۆیی و ڕێکخستنا پڕۆپۆزەلێ' : outputLang === 'ku' ? 'پشکنینی هاوتەریببوونی زانستی پڕۆپۆزەڵ' : outputLang === 'ar' ? 'محرك تشخيص الاتساق الأكاديمي للمقترح' : 'Academic Alignment & Proposal Diagnostic Engine'}
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5 font-bold text-[11px]">
@@ -1077,7 +1184,9 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
               {validationMetrics.strengths.length > 0 && (
                 <div className="space-y-1">
-                  <h5 className="font-bold text-emerald-700 dark:text-emerald-400 text-[11px] uppercase tracking-wider">Proposal Strengths:</h5>
+                  <h5 className="font-bold text-emerald-700 dark:text-emerald-400 text-[11px] uppercase tracking-wider">
+                    {outputLang === 'bad' ? 'خالێن هێزا پڕۆپۆزەلێ:' : outputLang === 'ku' ? 'خاڵەکانی بەهێزیی پڕۆپۆزەڵ:' : outputLang === 'ar' ? 'نقاط قوة المقترح:' : 'Proposal Strengths:'}
+                  </h5>
                   <ul className="space-y-1 text-slate-700 dark:text-slate-300 font-serif text-[11px]">
                     {validationMetrics.strengths.map((str, idx) => (
                       <li key={idx} className="flex items-start gap-1">
@@ -1090,7 +1199,9 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
 
               {validationMetrics.needsImprovement.length > 0 && (
                 <div className="space-y-1">
-                  <h5 className="font-bold text-amber-700 dark:text-amber-400 text-[11px] uppercase tracking-wider">Needs Improvement:</h5>
+                  <h5 className="font-bold text-amber-700 dark:text-amber-400 text-[11px] uppercase tracking-wider">
+                    {outputLang === 'bad' ? 'خالێن پێویستی ب کوورکرنێ و باشترکرنێ:' : outputLang === 'ku' ? 'خاڵەکانی پێویست بە باشترکردن:' : outputLang === 'ar' ? 'نقاط تطلب التحسين والتطوير:' : 'Needs Improvement:'}
+                  </h5>
                   <ul className="space-y-1 text-amber-900 dark:text-amber-300 font-serif text-[11px]">
                     {validationMetrics.needsImprovement.map((ni, idx) => (
                       <li key={idx} className="flex items-start gap-1">
@@ -1108,7 +1219,7 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
             {/* Sidebar Navigation (22 Sections) */}
             <div className="md:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 space-y-2 h-fit max-h-[85vh] overflow-y-auto">
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 px-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-                Proposal Navigation (22 Sections)
+                {outputLang === 'bad' ? 'نەخشەیا ٢٢ بەشێن پڕۆپۆزەلێ' : outputLang === 'ku' ? 'پێڕستی ٢٢ بەشی پڕۆپۆزەڵ' : outputLang === 'ar' ? 'قائمة 22 قسماً للمقترح الأكاديمي' : 'Proposal Navigation (22 Sections)'}
               </h4>
               <div className="space-y-1">
                 {SECTION_KEYS.map(sec => {
@@ -1119,7 +1230,7 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
                       onClick={() => setActiveSectionCode(sec.code)}
                       className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between ${activeSectionCode === sec.code ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                     >
-                      <span className="truncate">{sec.title}</span>
+                      <span className="truncate">{getLocalizedProposalSectionTitle(sec.code, outputLang)}</span>
                       <div className="flex items-center gap-1 shrink-0">
                         {m.words > 0 && <span className={`text-[10px] opacity-80 ${activeSectionCode === sec.code ? 'text-white' : 'text-slate-400'}`}>{m.words}w</span>}
                         <CheckCircle2 className={`w-3.5 h-3.5 ${activeSectionCode === sec.code ? 'text-white' : m.quality === 'Excellent' ? 'text-emerald-500' : 'text-amber-500'}`} />
@@ -1138,7 +1249,7 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
                   <div className="space-y-0.5">
                     <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                      {SECTION_KEYS.find(s => s.code === activeSectionCode)?.title}
+                      {getLocalizedProposalSectionTitle(activeSectionCode, outputLang)}
                     </h3>
                     <div className="flex items-center gap-2 text-[11px] text-slate-500">
                       <span>Words: <strong>{activeMetrics.words}</strong> / Target: <strong>{activeMetrics.minTarget}w</strong></span>
@@ -1152,14 +1263,14 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
                         onClick={() => saveEditedSection(activeSectionCode)}
                         className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-1"
                       >
-                        <Save className="w-3.5 h-3.5" /> Save Changes
+                        <Save className="w-3.5 h-3.5" /> {outputLang === 'bad' ? 'پاراستنا دەستکاریان' : outputLang === 'ku' ? 'پاشەکەوتکردن' : outputLang === 'ar' ? 'حفظ' : 'Save Changes'}
                       </button>
                     ) : (
                       <button
                         onClick={() => startEditingSection(activeSectionCode)}
                         className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 flex items-center gap-1"
                       >
-                        <Edit3 className="w-3.5 h-3.5" /> Edit
+                        <Edit3 className="w-3.5 h-3.5" /> {outputLang === 'bad' ? 'دەستکاری' : outputLang === 'ku' ? 'دەستکاری' : outputLang === 'ar' ? 'تعديل' : 'Edit'}
                       </button>
                     )}
 
@@ -1169,7 +1280,7 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
                       className="px-2.5 py-1 text-xs font-bold rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center gap-1"
                     >
                       {regeneratingSectionCode === activeSectionCode ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                      Regenerate
+                      {outputLang === 'bad' ? 'بەرهەمهێنانا دووبارە' : outputLang === 'ku' ? 'دووبارە دروستکردنەوە' : outputLang === 'ar' ? 'إعادة التوليد' : 'Regenerate'}
                     </button>
 
                     <button
@@ -1178,7 +1289,7 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
                       className="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 flex items-center gap-1"
                     >
                       {continuingSectionCode === activeSectionCode ? <RefreshCw className="w-3 h-3 animate-spin" /> : <PlusCircle className="w-3 h-3" />}
-                      Continue Writing
+                      {outputLang === 'bad' ? 'بەردەوامبوونا نڤێسینێ 🪄' : outputLang === 'ku' ? 'بەردەوامبوون لە نووسین 🪄' : outputLang === 'ar' ? 'متابعة الكتابة 🪄' : 'Continue Writing'}
                     </button>
                   </div>
                 </div>
@@ -1214,14 +1325,16 @@ export const ProposalGenerator: React.FC<ProposalGeneratorProps> = ({
                   {/* Active Section Content Display */}
                   {activeSectionCode === '01_title_page' && (
                     <div className="space-y-4 text-center p-8 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
-                      <span className="text-xs font-bold uppercase tracking-widest text-purple-600">Formal Academic Title Page</span>
+                      <span className="text-xs font-bold uppercase tracking-widest text-purple-600">
+                        {outputLang === 'bad' ? 'لاپەڕێ ناڤنیشانێ ئەکادیمی یێ فەرمی' : outputLang === 'ku' ? 'لاپەڕەی سەردێڕی فەرمیی ئەکادیمی' : outputLang === 'ar' ? 'صفحة العنوان الأكاديمي الرسمية' : 'Formal Academic Title Page'}
+                      </span>
                       <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white uppercase">{proposal.title}</h1>
                       <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1 font-serif pt-4 border-t border-slate-200 dark:border-slate-700">
-                        <p>Submitted by: <strong>{proposal.researcherName || '[ناوی توێژەر]'}</strong></p>
-                        <p>Supervisor: <strong>{proposal.supervisorName || '[ناوی سەرپەرشتیار]'}</strong></p>
-                        <p>{proposal.department || '[بەش]'}, {proposal.college || '[کۆلێژ]'}</p>
-                        <p>{proposal.university || '[ناوی زانکۆ]'}</p>
-                        <p className="pt-2 font-mono">Date: {proposal.submissionDate || new Date().toISOString().split('T')[0]}</p>
+                        <p>{outputLang === 'bad' ? 'پێشکەش هاتیە کرن ژلایێ:' : outputLang === 'ku' ? 'پێشکەش کراوە لەلایەن:' : outputLang === 'ar' ? 'إعداد الباحث:' : 'Submitted by:'} <strong>{proposal.researcherName || (outputLang === 'bad' ? '[ناڤێ ڤەکۆلەری]' : '[ناوی توێژەر]')}</strong></p>
+                        <p>{outputLang === 'bad' ? 'لژێر سەرپەرشتییا:' : outputLang === 'ku' ? 'لەژێر سەرپەرشتیی:' : outputLang === 'ar' ? 'إشراف الدكتور:' : 'Supervisor:'} <strong>{proposal.supervisorName || (outputLang === 'bad' ? '[ناڤێ سەرپەرشتیاری]' : '[ناوی سەرپەرشتیار]')}</strong></p>
+                        <p>{proposal.department || (outputLang === 'bad' ? '[بەشێ زانستی]' : '[بەش]')}, {proposal.college || (outputLang === 'bad' ? '[کۆلێژ]' : '[کۆلێژ]')}</p>
+                        <p>{proposal.university || (outputLang === 'bad' ? '[ناڤێ زانکۆیێ]' : '[ناوی زانکۆ]')}</p>
+                        <p className="pt-2 font-mono">{outputLang === 'bad' ? 'مێژوو:' : outputLang === 'ku' ? 'بەروار:' : outputLang === 'ar' ? 'التاريخ:' : 'Date:'} {proposal.submissionDate || new Date().toISOString().split('T')[0]}</p>
                       </div>
                     </div>
                   )}

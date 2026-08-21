@@ -58,13 +58,14 @@ import {
   Zap
 } from 'lucide-react';
 import { Language, SpssAnalysisOutput, SpssDataset } from '../types';
-import { isRTL } from '../lib/i18n';
+import { isRTL, t } from '../lib/i18n';
 import { exportResearchReportToWord, exportResearchReportToPdf } from '../lib/exportUtils';
 import { aiService } from '../services/aiService';
 
 interface ResearchReportGeneratorProps {
   lang: Language;
   onSaveProject: (item: any) => void;
+  onLanguageChange?: (newLang: Language) => void;
 }
 
 export interface ResearchQuestion {
@@ -1590,13 +1591,13 @@ export const ResearchReportGenerator: React.FC<ResearchReportGeneratorProps> = (
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-gradient-to-r from-indigo-950 via-slate-900 to-sky-950 text-white shadow-xl border border-indigo-800/40">
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold border border-indigo-500/30">
-            <Award className="w-4 h-4 text-indigo-400" /> Academic Research Report Studio
+            <Award className="w-4 h-4 text-indigo-400" /> {t('navReport', lang)}
           </div>
           <h1 className="text-xl md:text-3xl font-extrabold tracking-tight">
-            Research Report & Introduction Studio
+            {t('reportTitle', lang)}
           </h1>
           <p className="text-slate-300 text-xs md:text-sm max-w-2xl leading-relaxed">
-            Formulate hypotheses, generate complete Chapter 1 Introduction sections (3.1 - 3.8), import SPSS calculations, and export publication-ready APA 7 reports.
+            {t('reportSubtitle', lang)}
           </p>
         </div>
 

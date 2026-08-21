@@ -35,8 +35,8 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import { LitReviewData, LitReviewPaperMeta, Language, ProjectItem, AcademicSearchResultItem, ResearchGapOutput, MethodologyOutput } from '../types';
+import { t, isRTL, getAcademicLevels, getCitationStyles, getOutputLanguageOptions } from '../lib/i18n';
 import { exportLitReviewToWord, exportLitReviewToPdf, exportLitReviewToLatex } from '../lib/exportUtils';
-import { isRTL, t } from '../lib/i18n';
 import { aiService } from '../services/aiService';
 import { FileUploadZone } from './FileUploadZone';
 import { ParsedFileResult } from '../lib/fileParser';
@@ -44,15 +44,17 @@ import { ParsedFileResult } from '../lib/fileParser';
 interface LitReviewGeneratorProps {
   lang: Language;
   onSaveProject: (item: ProjectItem) => void;
+  onLanguageChange?: (newLang: Language) => void;
 }
 
 export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
   lang,
-  onSaveProject
+  onSaveProject,
+  onLanguageChange
 }) => {
   // Input Parameters
   const [topic, setTopic] = useState('');
-  const [field, setField] = useState('Education & Social Sciences');
+  const [field, setField] = useState('');
   const [citationStyle, setCitationStyle] = useState('APA 7th Edition');
   const [outputLang, setOutputLang] = useState<Language>(lang);
   const [currentResearchId, setCurrentResearchId] = useState<string>(() => `res_${Date.now()}_${Math.random().toString(36).substring(7)}`);
@@ -567,7 +569,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
         currentContent: currentText,
         action: 'expand',
         academicLevel,
-        language: outputLang
+        language: review?.language || outputLang || lang
       });
 
       if (response && response.newContent) {
@@ -737,13 +739,13 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-gradient-to-r from-indigo-950 via-slate-900 to-slate-950 text-white rounded-3xl shadow-xl border border-indigo-800/50">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold">
-            <GraduationCap className="w-4 h-4" /> Academic Systematic Literature Review & Methodology Suite
+            <GraduationCap className="w-4 h-4" /> {t('litReviewSuiteTagline', lang)}
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-            Literature Review, Gap & Methodology Workspace
+            {t('litReviewWorkspaceTitle', lang)}
           </h1>
           <p className="text-slate-300 text-xs md:text-sm">
-            Generate continuous academic paragraphs with clickable in-text citations, verified APA 7 references, evidence-based Research Gap, and complete Academic Methodology chapter.
+            {t('litReviewWorkspaceDesc', lang)}
           </p>
         </div>
       </div>
@@ -755,13 +757,13 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             <div className="md:col-span-8 space-y-1.5">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Core Research Title / Topic *
+                {t('coreResearchTitle', lang)}
               </label>
               <input
                 type="text"
                 value={topic}
                 onChange={e => handleTopicChange(e.target.value)}
-                placeholder="e.g. هۆشیاری داهێنان لای مامۆستایانی باخچەی منداڵان لە پارێزگای دهۆک"
+                placeholder=""
                 required={inputPapers.length === 0}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500"
               />
@@ -769,13 +771,13 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
 
             <div className="md:col-span-4 space-y-1.5">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Academic Field / Discipline
+                {t('academicField', lang)}
               </label>
               <input
                 type="text"
                 value={field}
                 onChange={e => setField(e.target.value)}
-                placeholder="e.g. Early Childhood Education & Pedagogy"
+                placeholder=""
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs"
               />
             </div>
@@ -784,58 +786,59 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
           {/* Academic Parameters */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Academic Level</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">{t('academicLevelLabel', lang)}</label>
               <select
                 value={academicLevel}
                 onChange={e => setAcademicLevel(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-semibold"
               >
-                <option value="Undergraduate Senior Paper">Undergraduate Senior Paper</option>
-                <option value="Master's Thesis (M.Sc. / M.A.)">Master's Thesis (M.Sc. / M.A.)</option>
-                <option value="Doctoral Dissertation (Ph.D.)">Doctoral Dissertation (Ph.D.)</option>
-                <option value="Peer-Reviewed Journal Manuscript">Peer-Reviewed Journal Manuscript</option>
+                {getAcademicLevels(lang).map(lvl => (
+                  <option key={lvl.value} value={lvl.value}>{lvl.label}</option>
+                ))}
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Synthesis Depth & Length</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">{t('synthesisDepth', lang)}</label>
               <select
                 value={targetLength}
                 onChange={e => setTargetLength(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-semibold"
               >
-                <option value="Short">Short (Executive Overview)</option>
-                <option value="Standard">Standard (Standard Literature Review)</option>
-                <option value="Detailed">Detailed (Extended Multi-Theme Synthesis)</option>
-                <option value="Comprehensive">Comprehensive (Exhaustive PhD-Level Review)</option>
+                <option value="Short">{lang === 'bad' ? 'کورت (تێڕوانینا گشتی)' : lang === 'ku' ? 'کورت (تێڕوانینی گشتی)' : lang === 'ar' ? 'قصير (نظرة عامة)' : 'Short (Executive Overview)'}</option>
+                <option value="Standard">{lang === 'bad' ? 'پێوانەیی (پێداچوونا ستاندارد)' : lang === 'ku' ? 'ستاندارد (پێداچوونەوەی ستاندارد)' : lang === 'ar' ? 'قياسي (مراجعة قياسية)' : 'Standard (Standard Literature Review)'}</option>
+                <option value="Detailed">{lang === 'bad' ? 'مفصل (تراکم چەند تەمایی)' : lang === 'ku' ? 'ورد (تەواو بەش بەش)' : lang === 'ar' ? 'مفصل (توليف شامل)' : 'Detailed (Extended Multi-Theme Synthesis)'}</option>
+                <option value="Comprehensive">{lang === 'bad' ? 'تەمام (ئاستێ دکتۆرایێ)' : lang === 'ku' ? 'تەواو (ئاستی دکتۆرا)' : lang === 'ar' ? 'شامل (مستوى الدكتوراه)' : 'Comprehensive (Exhaustive PhD-Level Review)'}</option>
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Citation Format</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">{t('citationFormatLabel', lang)}</label>
               <select
                 value={citationStyle}
                 onChange={e => setCitationStyle(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-bold text-indigo-600 dark:text-indigo-400"
               >
-                <option value="APA 7th Edition">APA 7th Edition (Standard)</option>
-                <option value="MLA 9th Edition">MLA 9th Edition</option>
-                <option value="Chicago 17th Edition">Chicago 17th Edition</option>
-                <option value="Harvard Style">Harvard Referencing Style</option>
+                {getCitationStyles(lang).map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Output Language (100% Lock)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">{t('outputLanguageLabel', lang)}</label>
               <select
                 value={outputLang}
-                onChange={e => setOutputLang(e.target.value as Language)}
+                onChange={e => {
+                  const newLang = e.target.value as Language;
+                  setOutputLang(newLang);
+                  if (onLanguageChange) onLanguageChange(newLang);
+                }}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-semibold"
               >
-                <option value="en">English (Academic Standard)</option>
-                <option value="bad">بادینی (کوردی - دهۆک)</option>
-                <option value="ku">کوردی (سۆرانی)</option>
-                <option value="ar">العربية (الأكاديمية)</option>
+                {getOutputLanguageOptions(lang).map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -843,23 +846,23 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
           {/* Optional RQs & Objectives */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Optional Research Questions</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">{t('optionalResearchQuestions', lang)}</label>
               <textarea
                 rows={2}
                 value={researchQuestions}
                 onChange={e => setResearchQuestions(e.target.value)}
-                placeholder="e.g. What is the level of innovation awareness among kindergarten teachers in Duhok?"
+                placeholder=""
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs leading-relaxed"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Optional Research Objectives</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">{t('optionalResearchObjectives', lang)}</label>
               <textarea
                 rows={2}
                 value={researchObjectives}
                 onChange={e => setResearchObjectives(e.target.value)}
-                placeholder="e.g. To assess the impact of professional development workshops on educational innovation..."
+                placeholder=""
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs leading-relaxed"
               />
             </div>
@@ -871,7 +874,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-indigo-500" />
                 <span className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                  Academic Sources Hub ({inputPapers.length} Papers Queued)
+                  {t('academicSourcesHub', lang)} ({inputPapers.length} {t('papersQueued', lang)})
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -880,14 +883,14 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
                   onClick={() => setShowScholarModal(true)}
                   className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
                 >
-                  <Search className="w-3.5 h-3.5" /> Search Scholar / CrossRef
+                  <Search className="w-3.5 h-3.5" /> {t('searchScholar', lang)}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddManual(true)}
                   className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5"
                 >
-                  <PlusCircle className="w-3.5 h-3.5" /> Add Abstract Metadata
+                  <PlusCircle className="w-3.5 h-3.5" /> {t('addAbstractMetadata', lang)}
                 </button>
               </div>
             </div>
@@ -899,10 +902,10 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Loaded Papers Queue for AI Meta-Synthesis:
+                    {lang === 'bad' ? 'لیستا بەڵگەنامە و ژێدەرێن هاتییە بارکرن بۆ پێکڤەگرێدانێ:' : lang === 'ku' ? 'لیستی سەرچاوە بارکراوەکان بۆ پێکهاتەی AI:' : lang === 'ar' ? 'قائمة الأوراق المحملة للتحليل الشامل:' : 'Loaded Papers Queue for AI Meta-Synthesis:'}
                   </span>
                   <button type="button" onClick={() => setInputPapers([])} className="text-[11px] text-rose-500 hover:underline font-bold">
-                    Clear All Loaded Papers
+                    {lang === 'bad' ? 'پاککرنا هەمی فایلا' : lang === 'ku' ? 'سڕینەوەی هەموو فایلەکان' : lang === 'ar' ? 'إزالة جميع الملفات' : 'Clear All Loaded Papers'}
                   </button>
                 </div>
 
@@ -936,7 +939,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
             className="w-full md:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            {loading ? 'Synthesizing Literature Review & Continuous Academic Paragraphs...' : 'Generate Academic Literature Review'}
+            {loading ? t('generating', lang) : t('generateLitReviewBtn', lang)}
           </button>
         </form>
       </div>
@@ -968,10 +971,10 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs">
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate max-w-md">
-                Literature Review: {review.title}
+                {t('navLitReview', outputLang)}: {review.title}
               </h3>
               <p className="text-[11px] text-slate-500">
-                Academic Domain: {review.field} &bull; Citation Standard: {citationStyle} &bull; Level: {academicLevel}
+                {t('academicField', outputLang)}: {review.field} &bull; {t('citationFormatLabel', outputLang)}: {citationStyle} &bull; {t('academicLevelLabel', outputLang)}: {academicLevel}
               </p>
             </div>
 
@@ -981,7 +984,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
                 className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1.5"
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied ? 'Copied' : 'Copy All'}
+                {copied ? t('copiedBtn', outputLang) : t('copyBtn', outputLang)}
               </button>
               <button
                 onClick={() => exportLitReviewToWord(review)}
@@ -1010,7 +1013,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
             {/* Document Header */}
             <div className="border-b border-slate-200 dark:border-slate-800 pb-6 text-center space-y-2">
               <span className="text-[11px] uppercase tracking-widest font-bold text-indigo-600 dark:text-indigo-400">
-                Systematic Literature Review & Meta-Synthesis Chapter
+                {outputLang === 'bad' ? 'بەشێ پێداچوونا ئەدەبیاتان و تراکما تیۆری یا سیستەماتیک' : outputLang === 'ku' ? 'بەشی پێداچوونەوەی ئەدەبیاتی زانستی' : outputLang === 'ar' ? 'فصل مراجعة الأدبيات والتوليف الأكاديمي الشامل' : 'Systematic Literature Review & Meta-Synthesis Chapter'}
               </span>
               <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white leading-tight">
                 {review.title}
@@ -1029,7 +1032,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                     <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                      Literature Review Quality & Alignment Validator
+                      {outputLang === 'bad' ? 'شیکاریا ڕاستگۆیی و ڕێکخستنا کوالیتییا پێداچوونێ' : outputLang === 'ku' ? 'پشکنینی کوالیتی پێداچوونەوەی زانستی' : outputLang === 'ar' ? 'أداة التحقق من جودة مراجعة الأدبيات' : 'Literature Review Quality & Alignment Validator'}
                     </h3>
                   </div>
 
@@ -1041,7 +1044,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
                         ? 'bg-blue-600'
                         : 'bg-amber-600'
                     }`}>
-                      Overall Score: {review.qualityScores.overallQuality}/100 ({review.qualityScores.status})
+                      {outputLang === 'bad' ? 'نمرەی گشتی:' : outputLang === 'ku' ? 'نمرەی گشتی:' : outputLang === 'ar' ? 'النتيجة الإجمالية:' : 'Overall Score:'} {review.qualityScores.overallQuality}/100 ({review.qualityScores.status})
                     </span>
                   </div>
                 </div>
@@ -1049,23 +1052,23 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
                 {/* Score meters grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-xs">
                   <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 font-semibold uppercase block">Topic Alignment</span>
+                    <span className="text-[10px] text-slate-500 font-semibold uppercase block">{outputLang === 'bad' ? 'گونجانا بابەتی' : outputLang === 'ku' ? 'گونجانی بابەت' : outputLang === 'ar' ? 'ملاءمة الموضوع' : 'Topic Alignment'}</span>
                     <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{review.qualityScores.topicAlignment}/100</span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 font-semibold uppercase block">Evidence Quality</span>
+                    <span className="text-[10px] text-slate-500 font-semibold uppercase block">{outputLang === 'bad' ? 'کوالیتییا بەڵگان' : outputLang === 'ku' ? 'کوالیتی بەڵگەکان' : outputLang === 'ar' ? 'جودة الأدلة' : 'Evidence Quality'}</span>
                     <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{review.qualityScores.evidenceQuality}/100</span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 font-semibold uppercase block">Critical Synthesis</span>
+                    <span className="text-[10px] text-slate-500 font-semibold uppercase block">{outputLang === 'bad' ? 'تراکما ڕەخنەیی' : outputLang === 'ku' ? 'پێکهاتەی ڕەخنەیی' : outputLang === 'ar' ? 'التوليف النقدي' : 'Critical Synthesis'}</span>
                     <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400">{review.qualityScores.criticalSynthesis}/100</span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 font-semibold uppercase block">Gap Support</span>
+                    <span className="text-[10px] text-slate-500 font-semibold uppercase block">{outputLang === 'bad' ? 'پشتگیرییا دروچەیێ' : outputLang === 'ku' ? 'پشتگیری درز' : outputLang === 'ar' ? 'دعم الفجوة' : 'Gap Support'}</span>
                     <span className="text-xs font-bold text-amber-600 dark:text-amber-400">{review.qualityScores.researchGapSupport}/100</span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-500 font-semibold uppercase block">Academic Depth</span>
+                    <span className="text-[10px] text-slate-500 font-semibold uppercase block">{outputLang === 'bad' ? 'کووراتیا ئەکادیمی' : outputLang === 'ku' ? 'قوڵیی ئەکادیمی' : outputLang === 'ar' ? 'العمق الأكاديمي' : 'Academic Depth'}</span>
                     <span className="text-xs font-bold text-purple-600 dark:text-purple-400">{review.qualityScores.academicDepth}/100</span>
                   </div>
                 </div>
@@ -1115,7 +1118,7 @@ export const LitReviewGenerator: React.FC<LitReviewGeneratorProps> = ({
                   disabled={iterating === 'synthesis'}
                   className="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 flex items-center gap-1"
                 >
-                  <Sparkles className="w-3 h-3" /> Deepen Section
+                  <Sparkles className="w-3 h-3" /> {outputLang === 'bad' ? 'کوورکرنا بەشێ 🪄' : outputLang === 'ku' ? 'قوڵکردنەوەی بەش 🪄' : outputLang === 'ar' ? 'تعميق القسم 🪄' : 'Deepen Section 🪄'}
                 </button>
               </div>
 

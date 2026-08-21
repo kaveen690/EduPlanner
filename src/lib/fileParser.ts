@@ -26,12 +26,161 @@ export function formatBytes(bytes: number, decimals = 1): string {
 }
 
 /**
+ * Helper to dynamically load script from CDN if not already loaded
+ */
+function loadExternalScript(src: string, globalCheck: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    if ((window as any)[globalCheck]) {
+      return resolve((window as any)[globalCheck]);
+    }
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      existing.addEventListener('load', () => resolve((window as any)[globalCheck]));
+      existing.addEventListener('error', reject);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = () => resolve((window as any)[globalCheck]);
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+/**
+ * Extract clean text from PDF using PDF.js with pure-text fallback
+ */
+async function extractTextFromPdf(arrayBuffer: ArrayBuffer): Promise<string> {
+  try {
+    const pdfjsLib = await loadExternalScript(
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+      'pdfjsLib'
+    );
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
+    const pdfDoc = await loadingTask.promise;
+
+    let fullText = '';
+    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+      const page = await pdfDoc.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(' ');
+      if (pageText.trim()) {
+        fullText += pageText + '\n\n';
+      }
+    }
+
+    if (fullText.trim()) {
+      return fullText;
+    }
+  } catch (err) {
+    console.warn('[PDF.js CDN Extract Warning, using fallback]:', err);
+  }
+
+  // Fallback PDF text stream parser: filter binary objects & stream markers
+  const textDecoder = new TextDecoder('utf-8', { fatal: false });
+  const rawString = textDecoder.decode(arrayBuffer);
+
+  // Extract text blocks inside Tj or TJ operators
+  const textBlocks: string[] = [];
+  const matches = rawString.match(/\(([^)]+)\)\s*Tj/gi) || rawString.match(/T[jJ]\s*\((.*?)\)/gi);
+
+  if (matches && matches.length > 0) {
+    matches.forEach(m => {
+      const cleaned = m.replace(/[()Tj]/g, '').trim();
+      if (cleaned.length > 2 && !/^\d+\s+\d+$/.test(cleaned)) {
+        textBlocks.push(cleaned);
+      }
+    });
+  }
+
+  if (textBlocks.length > 0) {
+    return textBlocks.join(' ');
+  }
+
+  // Pure regex cleanup: strip binary headers like %PDF-1.5, objects, fonts, xrefs
+  return rawString
+    .replace(/%PDF-[\d.]+/gi, '')
+    .replace(/\d+\s+\d+\s+obj[\s\S]*?endobj/gi, '')
+    .replace(/stream[\s\S]*?endstream/gi, '')
+    .replace(/xref[\s\S]*?trailer/gi, '')
+    .replace(/[^\x20-\x7E\x0A\x0D\u0600-\u06FF\u0750-\u077F]/g, ' ')
+    .replace(/\b(obj|endobj|stream|endstream|Filter|FlateDecode|Length|Type|Font|Page|Catalog|Parent|Resources|MediaBox|Contents)\b/gi, '')
+    .replace(/\b\d+\s+\d+\b/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * Extract clean text from DOCX using JSZip
+ */
+async function extractTextFromDocx(arrayBuffer: ArrayBuffer): Promise<string> {
+  try {
+    const JSZip = await loadExternalScript(
+      'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+      'JSZip'
+    );
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const docXmlFile = zip.file('word/document.xml');
+
+    if (docXmlFile) {
+      const xmlText = await docXmlFile.async('text');
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+      const paragraphs = Array.from(xmlDoc.getElementsByTagName('w:p'));
+
+      const extractedParagraphs: string[] = [];
+      paragraphs.forEach(p => {
+        const textNodes = Array.from(p.getElementsByTagName('w:t'));
+        const pText = textNodes.map(t => t.textContent || '').join('');
+        if (pText.trim()) {
+          extractedParagraphs.push(pText.trim());
+        }
+      });
+
+      if (extractedParagraphs.length > 0) {
+        return extractedParagraphs.join('\n\n');
+      }
+    }
+  } catch (err) {
+    console.warn('[JSZip DOCX Extract Warning, using fallback]:', err);
+  }
+
+  // Fallback XML Tag Stripper for DOCX
+  const textDecoder = new TextDecoder('utf-8', { fatal: false });
+  const rawString = textDecoder.decode(arrayBuffer);
+  const matches = rawString.match(/<w:t[^>]*>(.*?)<\/w:t>/gi);
+
+  if (matches && matches.length > 0) {
+    return matches.map(m => m.replace(/<[^>]+>/g, '')).join(' ');
+  }
+
+  return rawString
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/[^\x20-\x7E\x0A\x0D\u0600-\u06FF\u0750-\u077F]/g, ' ');
+}
+
+/**
  * Clean & normalize extracted text
  */
 function cleanExtractedText(raw: string): string {
   return raw
-    .replace(/[\r\n]+/g, '\n')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => {
+      if (!line) return false;
+      // Filter out raw PDF/XML binary artifacts
+      if (/^%PDF/i.test(line)) return false;
+      if (/^\d+\s+\d+\s+obj/i.test(line)) return false;
+      if (/^<<\/.*>>$/.test(line)) return false;
+      if (/^PK\x03\x04/i.test(line)) return false;
+      return true;
+    })
+    .join('\n')
     .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
@@ -54,7 +203,6 @@ export async function parseUploadedFile(file: File): Promise<ParsedFileResult> {
       const parsed = Papa.parse(textContent, { header: true, skipEmptyLines: true });
       structuredRows = parsed.data;
 
-      // Convert rows to Markdown table or readable text
       if (parsed.data && parsed.data.length > 0) {
         const headers = Object.keys(parsed.data[0] as object);
         const headerRow = `| ${headers.join(' | ')} |`;
@@ -85,49 +233,15 @@ export async function parseUploadedFile(file: File): Promise<ParsedFileResult> {
 
       extractedText = sheetsText.join('\n\n');
     }
-    // 3. Word Document (.docx) Parsing
+    // 3. Word Document (.docx, .doc) Parsing
     else if (ext === 'docx' || ext === 'doc') {
       const arrayBuffer = await file.arrayBuffer();
-      // Decode DOCX XML text stream (extracting text nodes between <w:t> tags)
-      const textDecoder = new TextDecoder('utf-8', { fatal: false });
-      const rawString = textDecoder.decode(arrayBuffer);
-
-      // Extract text content from XML tags or clean stream text
-      const matches = rawString.match(/<w:t[^>]*>(.*?)<\/w:t>/gi);
-      if (matches && matches.length > 0) {
-        extractedText = matches
-          .map(m => m.replace(/<[^>]+>/g, ''))
-          .join(' ');
-      } else {
-        // Fallback: strip binary XML tags and preserve printable text
-        extractedText = rawString
-          .replace(/[^\x20-\x7E\x0A\x0D\u0600-\u06FF\u0750-\u077F]/g, ' ')
-          .replace(/<[^>]+>/g, ' ');
-      }
+      extractedText = await extractTextFromDocx(arrayBuffer);
     }
-    // 4. PDF (.pdf) Parsing
+    // 4. PDF (.pdf) Parsing via PDF.js
     else if (ext === 'pdf') {
       const arrayBuffer = await file.arrayBuffer();
-      const textDecoder = new TextDecoder('utf-8', { fatal: false });
-      const rawString = textDecoder.decode(arrayBuffer);
-
-      // Extract text blocks inside PDF streams (/BT ... /ET or text parentheses)
-      const textBlocks: string[] = [];
-      const matches = rawString.match(/\(([^)]+)\)\s*Tj/gi) || rawString.match(/T[jJ]\s*\((.*?)\)/gi);
-
-      if (matches && matches.length > 0) {
-        matches.forEach(m => {
-          const cleaned = m.replace(/[()Tj]/g, '').trim();
-          if (cleaned.length > 2) textBlocks.push(cleaned);
-        });
-        extractedText = textBlocks.join(' ');
-      } else {
-        // Fallback PDF text stream filter
-        extractedText = rawString
-          .replace(/[^\x20-\x7E\x0A\x0D\u0600-\u06FF\u0750-\u077F]/g, ' ')
-          .replace(/stream[\s\S]*?endstream/g, '')
-          .replace(/obj[\s\S]*?endobj/g, '');
-      }
+      extractedText = await extractTextFromPdf(arrayBuffer);
     }
     // 5. Plain Text (.txt, .md, .json)
     else {
@@ -143,12 +257,12 @@ export async function parseUploadedFile(file: File): Promise<ParsedFileResult> {
       fileSizeFormatted,
       fileSizeRawBytes,
       fileType: ext.toUpperCase(),
-      extractedText: cleanedText || `[Parsed Content from ${fileName} - ${words} words extracted]`,
+      extractedText: cleanedText || `[Extracted Content from ${fileName} - ${words} words parsed]`,
       wordCount: words,
       structuredRows
     };
   } catch (err: any) {
-    console.error('[FileParser Error]:', err);
+    console.error('[File Parser Error]:', err);
     return {
       success: false,
       fileName,
@@ -157,7 +271,7 @@ export async function parseUploadedFile(file: File): Promise<ParsedFileResult> {
       fileType: ext.toUpperCase(),
       extractedText: '',
       wordCount: 0,
-      error: err?.message || 'Failed to parse file content.'
+      error: err?.message || 'Failed to extract text from file.'
     };
   }
 }

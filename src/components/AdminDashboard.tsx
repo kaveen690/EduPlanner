@@ -14,29 +14,32 @@ import {
   Layers,
   Loader2
 } from 'lucide-react';
-import { AdminSystemMetrics, Language, UserProfile } from '../types';
+import { AdminSystemMetrics, Language, UserProfile, isAdminUser } from '../types';
 import { isRTL } from '../lib/i18n';
 import { supabaseAuth, subscribeToProfiles, supabase } from '../lib/supabase';
 
 interface AdminDashboardProps {
   lang: Language;
+  currentUser?: UserProfile | null;
 }
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang, currentUser }) => {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const isAdmin = isAdminUser(currentUser);
 
   useEffect(() => {
     let isMounted = true;
     async function loadUsers() {
       try {
-        const currentUser = await supabaseAuth.getSessionUser();
-        const isAdmin = currentUser?.email === 'workingkaveenhussein@gmail.com' || currentUser?.name === 'Kaveen Hussein';
+        const sessionUser = currentUser || await supabaseAuth.getSessionUser();
+        const authorized = isAdminUser(sessionUser);
 
-        if (!isAdmin) {
+        if (!authorized) {
           if (isMounted) {
-            setUsers(currentUser ? [currentUser] : []);
+            setUsers([]);
             setLoading(false);
           }
           return;
@@ -118,6 +121,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ lang }) => {
     apiSuccessRate: 100,
     systemHealth: 'Optimal'
   };
+
+  if (!isAdmin) {
+    return (
+      <div className="max-w-xl mx-auto my-16 p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-4 shadow-2xl">
+        <div className="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">Admin Access Restricted</h3>
+        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+          The Admin & Analytics dashboard and Academic User Directory are restricted exclusively to primary administrator accounts (Kaveen Hussein). Regular academic accounts do not have permission to view system metrics or user records.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-8">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AppMode, Language, ProjectItem, UserProfile, ToastNotification } from './types';
+import { AppMode, Language, ProjectItem, UserProfile, ToastNotification, isAdminUser } from './types';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { DashboardHome } from './components/DashboardHome';
@@ -58,8 +58,10 @@ export default function App() {
       setLoadingAuth(false);
       if (!user) {
         setIsAuthOpen(true);
-      } else if (user.email === 'workingkaveenhussein@gmail.com' || user.name === 'Kaveen Hussein') {
+      } else if (isAdminUser(user)) {
         setCurrentMode('admin');
+      } else {
+        setCurrentMode('dashboard');
       }
     }).catch((err) => {
       finished = true;
@@ -83,10 +85,19 @@ export default function App() {
       setLang(savedLang as Language);
     }
 
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (prefersDark) {
+    const savedTheme = localStorage.getItem('eduplanner_theme');
+    if (savedTheme === 'dark') {
       setDarkMode(true);
       document.documentElement.classList.add('dark');
+    } else if (savedTheme === 'light') {
+      setDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    } else {
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        setDarkMode(true);
+        document.documentElement.classList.add('dark');
+      }
     }
 
     const handleChatNav = (e: Event) => {
@@ -124,8 +135,10 @@ export default function App() {
     setDarkMode(newDark);
     if (newDark) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('eduplanner_theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('eduplanner_theme', 'light');
     }
   };
 
@@ -143,14 +156,14 @@ export default function App() {
     showToast('info', 'Item Removed', 'Deleted from recent history.');
   };
 
-  const isAdmin = currentUser?.email === 'workingkaveenhussein@gmail.com' || currentUser?.name === 'Kaveen Hussein';
+  const isAdmin = isAdminUser(currentUser);
 
   useEffect(() => {
-    if (currentMode === 'admin' && currentUser && !isAdmin) {
+    if (currentMode === 'admin' && !isAdmin) {
       setCurrentMode('dashboard');
       showToast('error', 'Access Restricted', 'Admin & Analytics dashboard is restricted to primary admin accounts only.');
     }
-  }, [currentMode, currentUser, isAdmin]);
+  }, [currentMode, isAdmin]);
 
   const rtl = isRTL(lang);
 
@@ -274,6 +287,7 @@ export default function App() {
               <ResearchGenerator
                 lang={lang}
                 onSaveProject={handleSaveProject}
+                onLanguageChange={handleLanguageChange}
               />
             )}
 
@@ -281,6 +295,7 @@ export default function App() {
               <LitReviewGenerator
                 lang={lang}
                 onSaveProject={handleSaveProject}
+                onLanguageChange={handleLanguageChange}
               />
             )}
 
@@ -288,6 +303,7 @@ export default function App() {
               <ProposalGenerator
                 lang={lang}
                 onSaveProject={handleSaveProject}
+                onLanguageChange={handleLanguageChange}
               />
             )}
 
@@ -295,6 +311,7 @@ export default function App() {
               <ThesisAssistant
                 lang={lang}
                 onSaveProject={handleSaveProject}
+                onLanguageChange={handleLanguageChange}
               />
             )}
 
@@ -302,6 +319,7 @@ export default function App() {
               <ResearchReportGenerator
                 lang={lang}
                 onSaveProject={handleSaveProject}
+                onLanguageChange={handleLanguageChange}
               />
             )}
 
@@ -316,6 +334,7 @@ export default function App() {
               <SeminarGenerator
                 lang={lang}
                 onSaveProject={handleSaveProject}
+                onLanguageChange={handleLanguageChange}
               />
             )}
 
@@ -330,6 +349,7 @@ export default function App() {
               <SpssAnalyzer
                 lang={lang}
                 onSaveProject={handleSaveProject}
+                onLanguageChange={handleLanguageChange}
               />
             )}
 
@@ -372,6 +392,7 @@ export default function App() {
             {currentMode === 'admin' && isAdmin && (
               <AdminDashboard
                 lang={lang}
+                currentUser={currentUser}
               />
             )}
           </main>
